@@ -4,11 +4,13 @@ export function createPackets(count) {
     packets.push({
       seq: i,
       status: "pending",
-      ack: false,
+      ackReceived: false,
+      received: false,
+      ackLostCount: 0,
       sentTime: null,
       timeout: 0,
       retryCount: 0,
-      isRetrying: false
+      isRetrying: false,
     });
   }
   return packets;

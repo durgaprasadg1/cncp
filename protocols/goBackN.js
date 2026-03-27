@@ -1,46 +1,91 @@
 export function goBackN(state) {
-  let { base, nextSeq, windowSize, packets, lossRate } = state;
+  let {
+    base,
+    nextSeq,
+    windowSize,
+    packets,
+    dataLossRate,
+    ackLossRate,
+    timeoutSteps,
+    baseTimer,
+    receiverExpected,
+  } = state;
 
-  // Try to send next packet if within window
-  if (nextSeq < base + windowSize && nextSeq < packets.length) {
-    const lost = Math.random() < lossRate;
+  const maxPackets = packets.length;
+  const timeoutLimit = timeoutSteps ?? 6;
+  let timer = baseTimer ?? 0;
+  let receiverNext = receiverExpected ?? 0;
 
-    if (lost) {
-      packets[nextSeq].status = "lost";
-      // On loss, we go back N - reset nextSeq to base for retransmission
-      // But keep at least one step of progression to show activity
-      if (nextSeq === base) {
-        nextSeq = base + 1; // Try next one
-      } else {
-        nextSeq = base; // Go back to base and retransmit
+  if (base < nextSeq) {
+    timer += 1;
+  } else {
+    timer = 0;
+  }
+
+  if (base < maxPackets && timer >= timeoutLimit) {
+    for (let i = base; i < Math.min(nextSeq, maxPackets); i++) {
+      if (!packets[i].ackReceived) {
+        packets[i].status = "retrying";
+        packets[i].retryCount += 1;
+        packets[i].timeout = 0;
       }
+    }
+    nextSeq = base;
+    timer = 0;
+  }
+
+  if (nextSeq < maxPackets && nextSeq < base + windowSize) {
+    const packet = packets[nextSeq];
+    const dataLost = Math.random() < dataLossRate;
+
+    packet.timeout = 0;
+
+    if (dataLost) {
+      packet.status = "lost";
+      packet.received = false;
     } else {
-      packets[nextSeq].status = "sent";
-      packets[nextSeq].ack = true;
-      nextSeq++;
+      const isDuplicate = nextSeq < receiverNext;
+      const isInOrder = nextSeq === receiverNext;
+
+      if (isInOrder) {
+        packet.received = true;
+        packet.status = "sent";
+        receiverNext += 1;
+      } else if (isDuplicate) {
+        packet.received = true;
+        packet.status = "retrying";
+      } else {
+        packet.received = false;
+        packet.status = "sent";
+      }
+
+      if (isInOrder || isDuplicate) {
+        const ackLost = Math.random() < ackLossRate;
+        if (ackLost) {
+          packet.status = "ack-lost";
+          packet.ackLostCount += 1;
+        } else {
+          for (let i = base; i < receiverNext; i++) {
+            packets[i].ackReceived = true;
+            packets[i].status = "ack";
+          }
+        }
+      }
     }
+
+    nextSeq += 1;
   }
 
-  // Move base window forward when all packets up to base are acknowledged
-  while (base < packets.length && packets[base] && packets[base].ack && packets[base].status === "sent") {
-    packets[base].status = "ack";
-    base++;
-  }
-
-  // If we've lost packets before base, need to retransmit them
-  let hasLostBeforeNextSeq = false;
-  for (let i = base; i < nextSeq && i < packets.length; i++) {
-    if (packets[i].status === "lost") {
-      hasLostBeforeNextSeq = true;
-      nextSeq = base; // Go back N
-      break;
-    }
+  while (base < maxPackets && packets[base].ackReceived) {
+    base += 1;
   }
 
   return {
     ...state,
     base,
     nextSeq,
-    packets
+    packets,
+    baseTimer: timer,
+    receiverExpected: receiverNext,
   };
 }

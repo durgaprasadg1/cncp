@@ -1,8 +1,12 @@
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import ToastProvider from "./components/ToastProvider";
 
-const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Sliding Window Protocols Simulation",
-  description: "Interactive visualization of Stop-and-Wait, Go-Back-N, and Selective Repeat protocols",
+  description:
+    "Interactive visualization of Stop-and-Wait, Go-Back-N, and Selective Repeat protocols",
 };
 
 export default function RootLayout({ children }) {
@@ -26,6 +31,7 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ margin: 0, padding: 0 }}
       >
+        <ToastProvider />
         {children}
       </body>
     </html>

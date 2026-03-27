@@ -1,52 +1,58 @@
 export function stopAndWait(state) {
-  let { current, packets, lossRate } = state;
+  let { current, packets, dataLossRate, ackLossRate, timeoutSteps } = state;
 
   if (current >= packets.length) return state;
 
-  // Check if current packet needs to be sent or retried
   const currentPacket = packets[current];
-  
-  // Handle timeout - retransmit after 10 steps without ACK
-  if ((currentPacket.status === "sent" || currentPacket.status === "lost")) {
-    currentPacket.timeout++;
-    
-    // Timeout trigger: resend after 10 steps
-    if (currentPacket.timeout >= 10) {
-      currentPacket.isRetrying = true;
-      currentPacket.retryCount++;
-      currentPacket.timeout = 0;
-      currentPacket.status = "retrying";
-      
-      // Attempt to resend
-      const lost = Math.random() < lossRate;
-      if (lost) {
-        currentPacket.status = "lost";
-      } else {
-        currentPacket.status = "ack";
-        currentPacket.isRetrying = false;
-        current++;
-      }
-    }
-  } else if (currentPacket.status === "pending" || currentPacket.status === "retrying") {
-    const lost = Math.random() < lossRate;
+  const timeoutLimit = timeoutSteps ?? 8;
 
-    if (lost) {
+  const attemptSend = () => {
+    const dataLost = Math.random() < dataLossRate;
+    currentPacket.timeout = 0;
+
+    if (dataLost) {
       currentPacket.status = "lost";
-      currentPacket.sentTime = Date.now();
-      currentPacket.timeout = 0;
-    } else {
-      currentPacket.status = "sent";
-      currentPacket.sentTime = Date.now();
-      currentPacket.timeout = 0;
+      currentPacket.received = false;
+      return;
     }
-  } else if (currentPacket.status === "ack" && current < packets.length - 1) {
-    // Already acked, move to next
-    current++;
+
+    currentPacket.status = "sent";
+    currentPacket.received = true;
+
+    const ackLost = Math.random() < ackLossRate;
+    if (ackLost) {
+      currentPacket.status = "ack-lost";
+      currentPacket.ackLostCount += 1;
+      return;
+    }
+
+    currentPacket.status = "ack";
+    currentPacket.ackReceived = true;
+    current += 1;
+  };
+
+  if (currentPacket.ackReceived) {
+    current += 1;
+  } else if (currentPacket.status === "pending") {
+    attemptSend();
+  } else if (currentPacket.status === "retrying") {
+    attemptSend();
+  } else if (
+    currentPacket.status === "sent" ||
+    currentPacket.status === "lost" ||
+    currentPacket.status === "ack-lost"
+  ) {
+    currentPacket.timeout += 1;
+    if (currentPacket.timeout >= timeoutLimit) {
+      currentPacket.isRetrying = true;
+      currentPacket.retryCount += 1;
+      currentPacket.status = "retrying";
+    }
   }
 
   return {
     ...state,
     packets,
-    current
+    current,
   };
 }

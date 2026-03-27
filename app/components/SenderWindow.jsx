@@ -3,9 +3,9 @@ import Packet from "./Packet";
 export default function SenderWindow({ packets, base, windowSize }) {
 
   return (
-    <div style={{ 
+    <div  style={{ 
       padding: "28px", 
-      background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)", 
+      background: "black", 
       borderRadius: 16,
       border: "2px solid rgba(255,255,255,0.2)",
       overflow: "auto",
