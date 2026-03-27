@@ -789,11 +789,7 @@ const SNW = () => {
                 value: stats.ackLost,
                 color: "from-yellow-100 to-yellow-200",
               },
-              {
-                label: "Lost",
-                value: stats.lost,
-                color: "from-rose-100 to-rose-200",
-              },
+              
             ].map((stat, idx) => (
               <div
                 key={idx}
