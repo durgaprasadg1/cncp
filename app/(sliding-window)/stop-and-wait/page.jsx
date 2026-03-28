@@ -25,6 +25,7 @@ const SNW = () => {
   const [loseAck, setLoseAck] = useState(false);
   const [sendCycle, setSendCycle] = useState(0);
   const [ackCycle, setAckCycle] = useState(0);
+  const [showDialog, setShowDialog] = useState(true);
 
   const [running, setRunning] = useState(false);
   const [stepCount, setStepCount] = useState(0);
@@ -250,6 +251,65 @@ const SNW = () => {
         color: "#0f172a",
       }}
     >
+      {showDialog && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 30,
+          }}
+        >
+          <div
+            style={{
+              width: "min(520px, 100%)",
+              background: "#ffffff",
+              borderRadius: 16,
+              padding: 24,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
+              color: "#0f172a",
+            }}
+          >
+            <h2 style={{ margin: "0 0 10px", fontSize: 24 }}>
+              Stop-and-Wait at a glance
+            </h2>
+            <p style={{ margin: "0 0 8px", color: "#334155", lineHeight: 1.6 }}>
+              Sends a single packet, waits for its ACK, then moves on. With
+              window size 1, every loss forces a retry of the same packet before
+              the next one can go.
+            </p>
+            <p
+              style={{ margin: "0 0 14px", color: "#334155", lineHeight: 1.6 }}
+            >
+              Controls: choose packet count before starting. Use
+              Start/Stop/Reset to run the demo. Tap "Loss Packet" or "Loss ACK"
+              once to drop the next in-flight packet or acknowledgment and watch
+              the resend.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowDialog(false)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 12,
+                  border: "none",
+                  background:
+                    "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         {/* Header */}
         <div style={{ marginBottom: 40 }}>
@@ -735,7 +795,6 @@ const SNW = () => {
               backdropFilter: "blur(10px)",
             }}
           >
-            
             <p style={{ margin: "0 0 8px 0" }}>
               <strong>Progress:</strong> {current}/{totalPackets}
             </p>
@@ -789,7 +848,6 @@ const SNW = () => {
                 value: stats.ackLost,
                 color: "from-yellow-100 to-yellow-200",
               },
-              
             ].map((stat, idx) => (
               <div
                 key={idx}
@@ -838,10 +896,7 @@ const SNW = () => {
               marginBottom: 12,
               fontSize: 14,
             }}
-          >
-            
-          </div>
-          
+          ></div>
         </div>
       </div>
 
