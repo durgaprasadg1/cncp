@@ -9,7 +9,10 @@ export default function ToastProvider() {
       richColors
       closeButton
       expand={false}
-      visibleToasts={3}
+      visibleToasts={1}
+      toastOptions={{
+        duration: 2600,
+      }}
     />
   );
 }

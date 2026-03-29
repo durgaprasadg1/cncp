@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createPackets } from "../../../utils/packet";
@@ -9,9 +15,9 @@ import { goBackN } from "../../../protocols/goBackN";
 const TOTAL_PACKETS = 12;
 const DATA_LOSS_RATE = 0;
 const ACK_LOSS_RATE = 0;
-const TIMEOUT_STEPS = 8;
-const TICK_MS = 1600;
-const ANIMATION_MS = 1400;
+const TIMEOUT_STEPS = 4;
+const TICK_MS = 3000;
+const ANIMATION_MS = 2200;
 
 const senderStyles = {
   pending: { bg: "#e2e8f0", color: "#0f172a", label: "Pending" },
@@ -174,42 +180,48 @@ export default function GBNPage() {
     if (toastKey === lastToastRef.current) return;
     lastToastRef.current = toastKey;
 
-    if (transmission.timeout && transmission.resendRange) {
-      toast.warning(
-        `Timeout at sender. Resending F${transmission.resendRange[0]} to F${transmission.resendRange[1]}.`,
-      );
-    }
-
     if (transmission.dataLost) {
-      toast.error(`Frame F${transmission.seq} was lost in the channel.`);
+      toast.error(`F${transmission.seq} was lost in the channel.`);
       return;
     }
 
-    if (transmission.receiverAction === "accepted") {
-      toast.success(`Receiver accepted frame F${transmission.seq}.`);
-    } else if (transmission.receiverAction === "duplicate") {
-      toast.warning(`Receiver got duplicate frame F${transmission.seq}.`);
-    } else if (transmission.receiverAction === "out-of-order") {
+    if (events.length === 1 && events[0] === "All frames have been acknowledged.") {
+      toast.success("All frames were delivered successfully.");
+      return;
+    }
+
+    if (transmission.timeout && transmission.resendRange) {
       toast.warning(
-        `Receiver discarded out-of-order F${transmission.seq} and still waits for F${transmission.ackNumber}.`,
+        `Timeout. Go-Back-N is resending from F${transmission.resendRange[0]} to F${transmission.resendRange[1]}.`,
       );
+      return;
+    }
+
+    if (transmission.receiverAction === "out-of-order") {
+      toast.warning(
+        `Receiver discarded F${transmission.seq}. Sender still waits for ACK ${transmission.ackNumber}.`,
+      );
+      return;
+    }
+
+    if (transmission.receiverAction === "duplicate") {
+      toast.warning(
+        `Receiver saw duplicate F${transmission.seq}. ACK ${transmission.ackNumber} goes back to sender.`,
+      );
+      return;
+    }
+
+    if (transmission.ackNumber !== null && transmission.ackLost) {
+      toast.warning(
+        `Receiver accepted F${transmission.seq}, but ACK ${transmission.ackNumber} was lost.`,
+      );
+      return;
     }
 
     if (transmission.ackNumber !== null) {
-      if (transmission.ackLost) {
-        toast.error(
-          `ACK ${transmission.ackNumber} was lost before reaching sender.`,
-        );
-      } else {
-        toast.success(`Sender received ACK ${transmission.ackNumber}.`);
-      }
-    }
-
-    if (
-      events.length === 1 &&
-      events[0] === "All frames have been acknowledged."
-    ) {
-      toast.success("All frames were delivered successfully.");
+      toast.success(
+        `Receiver accepted F${transmission.seq} and sender received ACK ${transmission.ackNumber}.`,
+      );
     }
   };
 
@@ -234,6 +246,7 @@ export default function GBNPage() {
     setState((previousState) => {
       const nextState = goBackN({
         ...previousState,
+        packets: previousState.packets.map((packet) => ({ ...packet })),
         forceDataLoss: lossFrame,
         forceAckLoss: lossAck,
       });
@@ -260,6 +273,10 @@ export default function GBNPage() {
     }
   };
 
+  const onTick = useEffectEvent(() => {
+    runStep();
+  });
+
   useEffect(() => {
     if (!running) {
       if (timerRef.current) {
@@ -270,7 +287,7 @@ export default function GBNPage() {
     }
 
     timerRef.current = setInterval(() => {
-      runStep();
+      onTick();
     }, TICK_MS);
 
     return () => {
@@ -279,7 +296,7 @@ export default function GBNPage() {
       }
       timerRef.current = null;
     };
-  });
+  }, [running]);
 
   useEffect(() => {
     if (!animation) return undefined;
@@ -377,7 +394,7 @@ export default function GBNPage() {
               style={{ margin: "0 0 14px", color: "#334155", lineHeight: 1.6 }}
             >
               Controls: pick window size before starting, then use
-              Start/Stop/Reset. Press "Loss Frame" or "Loss ACK" once to drop
+              Start/Stop/Reset. Press &quot;Loss Frame&quot; or &quot;Loss ACK&quot; once to drop
               the next frame or ACK and see how recovery works.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -720,6 +737,7 @@ export default function GBNPage() {
               <span>Base: {state.base}</span>
               <span>NextSeq: {state.nextSeq}</span>
               <span>Receiver expects: F{state.receiverExpected}</span>
+              <span>One step every: 3 seconds</span>
               <span>Timeout after: {TIMEOUT_STEPS} ticks</span>
             </div>
           </div>
@@ -867,7 +885,7 @@ export default function GBNPage() {
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.6 }}>
                   {currentLog.length > 0
-                    ? currentLog[0]
+                    ? currentLog.join(" ")
                     : "Press Start to begin the simulation."}
                 </div>
               </div>

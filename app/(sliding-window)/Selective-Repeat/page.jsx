@@ -1,760 +1,434 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
-import SenderWindow from "../../components/SenderWindow";
-import SimulationControls from "../../components/SimulationControls";
+import { toast } from "sonner";
 import { createPackets } from "../../../utils/packet";
 import { selectiveRepeat } from "../../../protocols/selectiveRepeat";
 
-const SR = () => {
-  const defaultSettings = {
-    totalPackets: 12,
-    windowSize: 4,
-    dataLossRate: 0.15,
-    ackLossRate: 0.1,
-    tickMs: 500,
-  };
+const TOTAL = 12;
+const TIMEOUT = 6;
+const TICK_MS = 3000;
+const ANIM_MS = 2200;
+const MAX_LOGS = 10;
 
-  const buildState = (config) => ({
-    packets: createPackets(config.totalPackets),
+const senderStyles = {
+  pending: ["#e2e8f0", "#0f172a", "Pending"],
+  sent: ["#38bdf8", "#ffffff", "Sent"],
+  retrying: ["#f97316", "#ffffff", "Retry"],
+  lost: ["#ef4444", "#ffffff", "Lost"],
+  ack: ["#22c55e", "#ffffff", "ACKed"],
+  "ack-lost": ["#f59e0b", "#1f2937", "ACK lost"],
+};
+
+const receiverStyles = {
+  pending: ["#e2e8f0", "#0f172a", "Idle"],
+  waiting: ["#dbeafe", "#1d4ed8", "Rn"],
+  buffered: ["#a855f7", "#ffffff", "Buffered"],
+  delivered: ["#22c55e", "#ffffff", "Delivered"],
+  duplicate: ["#f59e0b", "#1f2937", "Duplicate"],
+  lost: ["#ef4444", "#ffffff", "Lost"],
+};
+
+const toneStyles = {
+  info: ["linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)", "0 14px 32px rgba(14, 165, 233, 0.35)"],
+  success: ["linear-gradient(135deg, #22c55e 0%, #16a34a 100%)", "0 14px 32px rgba(34, 197, 94, 0.35)"],
+  warning: ["linear-gradient(135deg, #f97316 0%, #ea580c 100%)", "0 14px 32px rgba(249, 115, 22, 0.35)"],
+  danger: ["linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", "0 14px 32px rgba(239, 68, 68, 0.35)"],
+  purple: ["linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", "0 14px 32px rgba(139, 92, 246, 0.35)"],
+};
+
+function buildState(windowSize) {
+  return {
+    packets: createPackets(TOTAL).map((packet) => ({
+      ...packet,
+      receiverBuffered: false,
+      receiverDelivered: false,
+      nakCount: 0,
+    })),
     base: 0,
     nextSeq: 0,
-    windowSize: config.windowSize,
-    dataLossRate: config.dataLossRate,
-    ackLossRate: config.ackLossRate,
-    timeoutSteps: Math.max(3, Math.round(3000 / config.tickMs)),
+    windowSize,
+    dataLossRate: 0,
+    ackLossRate: 0,
+    forceDataLoss: false,
+    forceAckLoss: false,
+    timeoutSteps: TIMEOUT,
     receiverBase: 0,
-  });
-
-  const [settings, setSettings] = useState(defaultSettings);
-  const [tickMs, setTickMs] = useState(defaultSettings.tickMs);
-  const [totalPackets, setTotalPackets] = useState(
-    defaultSettings.totalPackets,
-  );
-  const [state, setState] = useState(buildState(defaultSettings));
-
-  const [running, setRunning] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [stepCount, setStepCount] = useState(0);
-  const [stats, setStats] = useState({
-    sent: 0,
-    acked: 0,
-    lost: 0,
-    lostPackets: [],
-    selectiveRetries: 0,
-    ackLost: 0,
-    retries: 0,
-  });
-
-  useEffect(() => {
-    if (!running || paused) return;
-
-    if (state.base >= totalPackets && state.nextSeq >= totalPackets) {
-      setRunning(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setState((prev) => {
-        const newState = selectiveRepeat(prev);
-
-        setStats((s) => {
-          const sent = newState.packets.filter((p) =>
-            ["sent", "ack", "ack-lost", "retrying"].includes(p.status),
-          ).length;
-          const acked = newState.packets.filter(
-            (p) => p.status === "ack",
-          ).length;
-          const lost = newState.packets.filter(
-            (p) => p.status === "lost",
-          ).length;
-          const ackLost = newState.packets.filter(
-            (p) => p.status === "ack-lost",
-          ).length;
-          const retries = newState.packets.reduce(
-            (sum, p) => sum + p.retryCount,
-            0,
-          );
-          const lostPackets = newState.packets
-            .filter((p) => p.status === "lost")
-            .map((p) => p.seq);
-
-          return {
-            sent,
-            acked,
-            lost,
-            lostPackets,
-            selectiveRetries: s.selectiveRetries + (lost > s.lost ? 1 : 0),
-            ackLost,
-            retries,
-          };
-        });
-
-        setStepCount((c) => c + 1);
-        return newState;
-      });
-    }, tickMs);
-
-    return () => clearInterval(interval);
-  }, [running, paused, state.base, state.nextSeq, tickMs, totalPackets]);
-
-  const handleStart = () => {
-    setRunning(true);
-    setPaused(false);
+    nakQueue: [],
+    pendingNak: null,
+    events: [],
+    lastTransmission: null,
   };
-  const handleStop = () => setRunning(false);
-  const handlePauseResume = () => setPaused(!paused);
-  const handleApply = () => {
-    const normalizedWindow = Math.min(
-      settings.windowSize,
-      settings.totalPackets,
-    );
-    const nextSettings = { ...settings, windowSize: normalizedWindow };
-    setSettings(nextSettings);
-    setTickMs(nextSettings.tickMs);
-    setTotalPackets(nextSettings.totalPackets);
-    setRunning(false);
-    setPaused(false);
-    setStepCount(0);
-    setStats({
-      sent: 0,
-      acked: 0,
-      lost: 0,
-      lostPackets: [],
-      selectiveRetries: 0,
-      ackLost: 0,
-      retries: 0,
-    });
-    setState(buildState(nextSettings));
-  };
-  const handleReset = () => {
-    setRunning(false);
-    setPaused(false);
-    setStepCount(0);
-    setStats({
-      sent: 0,
-      acked: 0,
-      lost: 0,
-      lostPackets: [],
-      selectiveRetries: 0,
-      ackLost: 0,
-      retries: 0,
-    });
-    setState(
-      buildState({
-        ...settings,
-        windowSize: Math.min(settings.windowSize, settings.totalPackets),
-      }),
-    );
-  };
+}
 
-  const completionPercent = ((stats.acked / totalPackets) * 100).toFixed(1);
+function senderStatus(packet) {
+  if (packet.ackReceived) return "ack";
+  if (packet.status === "ack-lost") return "ack-lost";
+  if (packet.status === "lost") return "lost";
+  if (packet.status === "retrying") return "retrying";
+  if (packet.status === "sent") return "sent";
+  return "pending";
+}
 
+function receiverStatus(packet, state) {
+  const tx = state.lastTransmission;
+  if (packet.receiverDelivered) return "delivered";
+  if (packet.seq === state.receiverBase) return "waiting";
+  if (tx?.seq === packet.seq && tx.dataLost) return "lost";
+  if (tx?.seq === packet.seq && tx.receiverAction === "duplicate") return "duplicate";
+  if (packet.receiverBuffered) return "buffered";
+  return "pending";
+}
+
+function statsFrom(packets) {
+  return {
+    sent: packets.filter((p) => p.sentTime !== null).length,
+    acked: packets.filter((p) => p.ackReceived).length,
+    lost: packets.filter((p) => p.status === "lost").length,
+    ackLost: packets.filter((p) => p.status === "ack-lost").length,
+    retries: packets.reduce((sum, p) => sum + p.retryCount, 0),
+    buffered: packets.filter((p) => p.receiverBuffered && !p.receiverDelivered).length,
+  };
+}
+
+function Badge({ label, tone, style }) {
+  const [background, shadow] = toneStyles[tone];
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
-        padding: "30px 20px",
-        color: "#0f172a",
+        minWidth: 88,
+        height: 56,
+        padding: "0 18px",
+        borderRadius: 16,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 800,
+        color: "#fff",
+        border: "2px solid rgba(255,255,255,0.55)",
+        background,
+        boxShadow: shadow,
+        ...style,
       }}
     >
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
+      {label}
+    </div>
+  );
+}
+
+function FrameCard({ title, packetLabel, styleTuple, extra, highlight }) {
+  const [bg, color, label] = styleTuple;
+  return (
+    <div
+      style={{
+        padding: "14px 10px",
+        borderRadius: 16,
+        background: bg,
+        color,
+        border: highlight ? "2px solid #0f172a" : "1px solid rgba(15,23,42,0.14)",
+        boxShadow: highlight ? "0 10px 24px rgba(15,23,42,0.12)" : "none",
+      }}
+    >
+      <div style={{ fontWeight: 800, fontSize: 20 }}>{title}</div>
+      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 700 }}>{label}</div>
+      {packetLabel ? <div style={{ fontSize: 11, marginTop: 8, opacity: 0.86 }}>{packetLabel}</div> : null}
+      {extra}
+    </div>
+  );
+}
+
+export default function SelectiveRepeatPage() {
+  const [windowSize, setWindowSize] = useState(4);
+  const [state, setState] = useState(() => buildState(4));
+  const [running, setRunning] = useState(false);
+  const [lossFrame, setLossFrame] = useState(false);
+  const [lossAck, setLossAck] = useState(false);
+  const [currentLog, setCurrentLog] = useState([]);
+  const [timeline, setTimeline] = useState([]);
+  const [animation, setAnimation] = useState(null);
+  const timerRef = useRef(null);
+  const lastToastRef = useRef("");
+
+  const stats = useMemo(() => statsFrom(state.packets), [state.packets]);
+  const complete = state.base >= TOTAL && state.nextSeq >= TOTAL;
+  const progress = ((stats.acked / TOTAL) * 100).toFixed(1);
+
+  const pushToasts = (tx, events) => {
+    if (!tx || tx.type === "idle") return;
+    const key = JSON.stringify(tx);
+    if (key === lastToastRef.current) return;
+    lastToastRef.current = key;
+
+    if (tx.dataLost) {
+      toast.error(`F${tx.seq} was lost in the channel.`);
+      return;
+    }
+    if (events.length === 1 && events[0] === "All frames have been selectively acknowledged.") {
+      toast.success("Selective Repeat completed successfully.");
+      return;
+    }
+    if (tx.receiverAction === "buffered") {
+      toast.warning(`Receiver buffered F${tx.seq} and sent NAK-${tx.nakNumber} for the missing frame.`);
+      return;
+    }
+    if (tx.receiverAction === "duplicate") {
+      toast.warning(`Receiver got duplicate F${tx.seq} and replied with ACK-${tx.ackNumber}.`);
+      return;
+    }
+    if (tx.ackNumber !== null && tx.ackLost) {
+      toast.warning(`Receiver accepted F${tx.seq}, but ACK-${tx.ackNumber} was lost.`);
+      return;
+    }
+    if (tx.ackNumber !== null) {
+      toast.success(`Receiver accepted F${tx.seq} and sender received ACK-${tx.ackNumber}.`);
+    }
+  };
+
+  const buildAnimation = (tx) => {
+    if (!tx || tx.type === "idle" || tx.seq === null) return null;
+    return { id: `${Date.now()}-${tx.seq}`, tx };
+  };
+
+  const runStep = () => {
+    let shouldStop = false;
+    setState((previous) => {
+      const next = selectiveRepeat({
+        ...previous,
+        packets: previous.packets.map((packet) => ({ ...packet })),
+        nakQueue: [...previous.nakQueue],
+        forceDataLoss: lossFrame,
+        forceAckLoss: lossAck,
+      });
+      const logs = next.events ?? [];
+      setCurrentLog(logs);
+      setTimeline((old) => [...logs, ...old].slice(0, MAX_LOGS));
+      setAnimation(buildAnimation(next.lastTransmission));
+      pushToasts(next.lastTransmission, logs);
+      setLossFrame(false);
+      setLossAck(false);
+      shouldStop = next.base >= TOTAL && next.nextSeq >= TOTAL;
+      return { ...next, forceDataLoss: false, forceAckLoss: false };
+    });
+    if (shouldStop) setRunning(false);
+  };
+
+  const onTick = useEffectEvent(() => {
+    runStep();
+  });
+
+  useEffect(() => {
+    if (!running) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+      return undefined;
+    }
+    timerRef.current = setInterval(() => onTick(), TICK_MS);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [running]);
+
+  useEffect(() => {
+    if (!animation) return undefined;
+    const timeout = setTimeout(() => setAnimation(null), ANIM_MS);
+    return () => clearTimeout(timeout);
+  }, [animation]);
+
+  const resetView = (nextWindow) => {
+    setRunning(false);
+    setLossFrame(false);
+    setLossAck(false);
+    setCurrentLog([]);
+    setTimeline([]);
+    setAnimation(null);
+    lastToastRef.current = "";
+    setState(buildState(nextWindow));
+  };
+
+  const active = animation?.tx;
+  const frameTone = active?.dataLost ? "danger" : active?.type === "retransmission" ? "warning" : "info";
+  const controlTone = active?.nakNumber !== null ? "purple" : active?.ackLost ? "danger" : "success";
+
+  return (
+    <div style={{ minHeight: "100vh", background: "radial-gradient(circle at top left, rgba(168,85,247,0.18), transparent 28%), linear-gradient(135deg, #f7f5ff 0%, #e7edf8 100%)", padding: "32px 20px 48px", color: "#0f172a" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <div style={{ marginBottom: 28 }}>
           <Link href="/">
-            <button
-              style={{
-                padding: "10px 20px",
-                background: "rgba(30, 41, 59, 0.1)",
-                border: "2px solid rgba(15, 23, 42, 0.2)",
-                borderRadius: 8,
-                color: "#1e293b",
-                cursor: "pointer",
-                fontWeight: 600,
-                transition: "all 0.3s ease",
-                marginBottom: 20,
-              }}
-            >
-              ← Back to Home
+            <button style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid rgba(15,23,42,0.14)", background: "rgba(255,255,255,0.85)", color: "#0f172a", cursor: "pointer", fontWeight: 700 }}>
+              Back to Home
             </button>
           </Link>
-
-          <h1
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              marginBottom: 8,
-              textShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              color: "#0f172a",
-            }}
-          >
-            🎯 Selective Repeat Protocol
-          </h1>
-          <p
-            style={{ fontSize: 18, opacity: 0.9, margin: 0, color: "#1e293b" }}
-          >
-            Window Size: <strong>{state.windowSize}</strong> | Data Loss:{" "}
-            <strong>{(state.dataLossRate * 100).toFixed(0)}%</strong> | ACK
-            Loss: <strong>{(state.ackLossRate * 100).toFixed(0)}%</strong>
-          </p>
         </div>
 
-        <SimulationControls
-          settings={settings}
-          onChange={setSettings}
-          onApply={handleApply}
-          showWindowSize={true}
-        />
-
-        {/* Controls - 4 Buttons */}
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            marginBottom: 32,
-            flexWrap: "wrap",
-          }}
-        >
-          {[
-            {
-              label: "▶ Start",
-              onClick: handleStart,
-              bg: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-            },
-            {
-              label: "⏹ Stop",
-              onClick: handleStop,
-              bg: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-            },
-            {
-              label: paused ? "▶ Resume" : "⏸ Pause",
-              onClick: handlePauseResume,
-              bg: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-            },
-            {
-              label: "↻ Reset",
-              onClick: handleReset,
-              bg: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-            },
-          ].map((btn, idx) => (
-            <button
-              key={idx}
-              onClick={btn.onClick}
-              style={{
-                padding: "12px 28px",
-                background: btn.bg,
-                border: "none",
-                borderRadius: 10,
-                color: "white",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: 15,
-                transition: "all 0.3s ease",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = "translateY(-4px)";
-                e.target.style.boxShadow = "0 12px 28px rgba(0,0,0,0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-              }}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Animated Communication Diagram */}
-        <div
-          style={{
-            marginBottom: 30,
-            background: "rgba(255,255,255,0.08)",
-            border: "2px solid rgba(255,255,255,0.2)",
-            borderRadius: 16,
-            padding: 32,
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <h3
-            style={{
-              marginTop: 0,
-              fontSize: 20,
-              fontWeight: 700,
-              marginBottom: 24,
-            }}
-          >
-            🔄 Sender-Receiver Communication
-          </h3>
-
-          {/* Animated Diagram Container */}
-          <div style={{ position: "relative", minHeight: 300 }}>
-            {/* Sender Side */}
-            <div
-              style={{
-                position: "absolute",
-                left: 30,
-                top: 0,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  background:
-                    "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 36,
-                  fontWeight: 700,
-                  color: "white",
-                  boxShadow: "0 8px 24px rgba(59, 130, 246, 0.3)",
-                  border: "2px solid rgba(255,255,255,0.3)",
-                }}
-              >
-                📤
-              </div>
-              <p style={{ marginTop: 12, fontSize: 14, fontWeight: 600 }}>
-                SENDER
-              </p>
+        <div style={{ display: "grid", gap: 18, gridTemplateColumns: "minmax(0, 2.2fr) minmax(320px, 1fr)", alignItems: "start", marginBottom: 22 }}>
+          <div style={{ padding: 28, borderRadius: 26, background: "rgba(255,255,255,0.82)", border: "1px solid rgba(148,163,184,0.3)", boxShadow: "0 24px 60px rgba(15,23,42,0.12)" }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: "#7c3aed" }}>Sliding Window Simulation</p>
+            <h1 style={{ margin: "0 0 10px", fontSize: 42, lineHeight: 1.1 }}>Selective Repeat Protocol</h1>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "#334155" }}>
+              This version follows your reference example: out-of-order frames are buffered, the receiver issues a NAK for the missing frame, and the sender retransmits only that missing frame.
+            </p>
+          </div>
+          <div style={{ padding: 24, borderRadius: 24, background: "linear-gradient(135deg, #4c1d95 0%, #312e81 100%)", color: "#fff", boxShadow: "0 24px 60px rgba(49,46,129,0.24)" }}>
+            <div style={{ fontSize: 13, textTransform: "uppercase", opacity: 0.78 }}>Completion</div>
+            <div style={{ fontSize: 40, fontWeight: 800, margin: "10px 0 8px" }}>{progress}%</div>
+            <div style={{ width: "100%", height: 12, borderRadius: 999, background: "rgba(255,255,255,0.12)", overflow: "hidden", marginBottom: 16 }}>
+              <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(90deg, #22c55e 0%, #a855f7 100%)", transition: "width 0.35s ease" }} />
             </div>
-
-            {/* Communication Lines */}
-            <svg
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 120,
-                right: 120,
-                width: "calc(100% - 240px)",
-                height: "100%",
-              }}
-            >
-              <line
-                x1="0"
-                y1="40"
-                x2="100%"
-                y2="40"
-                stroke="rgba(71, 85, 99, 0.3)"
-                strokeWidth="2"
-              />
-              <line
-                x1="0"
-                y1="140"
-                x2="100%"
-                y2="140"
-                stroke="rgba(71, 85, 99, 0.3)"
-                strokeWidth="2"
-              />
-              <text x="5%" y="35" fontSize="12" fill="rgba(51, 65, 85, 0.7)">
-                Sending →
-              </text>
-              <text x="5%" y="135" fontSize="12" fill="rgba(51, 65, 85, 0.7)">
-                ← ACK
-              </text>
-            </svg>
-
-            {/* Animated Multiple Packets */}
-            {running && !paused && state.nextSeq > state.base && (
-              <>
-                {[0, 1, 2].map((offset) => (
-                  <div
-                    key={offset}
-                    style={{
-                      position: "absolute",
-                      top: 15,
-                      left: `calc(15% + ${offset * 8}px)`,
-                      animation: `packageMove 2s ease-in-out infinite`,
-                      animationDelay: `${offset * 0.3}s`,
-                      zIndex: 10 - offset,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 50,
-                        height: 50,
-                        background:
-                          "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 20,
-                        color: "white",
-                        fontWeight: 700,
-                        boxShadow: "0 6px 20px rgba(16, 185, 129, 0.4)",
-                        border: "2px solid rgba(255,255,255,0.5)",
-                      }}
-                    >
-                      📦
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* Animated ACK */}
-            {running && !paused && state.base > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 115,
-                  right: "15%",
-                  animation: `ackMove 2s ease-in-out infinite`,
-                  zIndex: 10,
-                }}
-              >
-                <div
-                  style={{
-                    width: 50,
-                    height: 50,
-                    background:
-                      "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                    color: "white",
-                    fontWeight: 700,
-                    boxShadow: "0 6px 20px rgba(245, 158, 11, 0.4)",
-                    border: "2px solid rgba(255,255,255,0.5)",
-                  }}
-                >
-                  ✓
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[["Sent", stats.sent], ["ACKed", stats.acked], ["Lost", stats.lost], ["ACK Lost", stats.ackLost], ["Retries", stats.retries], ["Buffered", stats.buffered]].map(([label, value]) => (
+                <div key={label} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontSize: 12, opacity: 0.72 }}>{label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
                 </div>
-              </div>
-            )}
-
-            {/* Receiver Side */}
-            <div
-              style={{
-                position: "absolute",
-                right: 30,
-                top: 0,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  background:
-                    "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 36,
-                  fontWeight: 700,
-                  color: "white",
-                  boxShadow: "0 8px 24px rgba(139, 92, 246, 0.3)",
-                  border: "2px solid rgba(255,255,255,0.3)",
-                }}
-              >
-                📥
-              </div>
-              <p style={{ marginTop: 12, fontSize: 14, fontWeight: 600 }}>
-                RECEIVER
-              </p>
-            </div>
-
-            {/* Status */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                textAlign: "center",
-                padding: "16px",
-                background: "rgba(255,255,255,0.05)",
-                borderRadius: 8,
-                fontSize: 13,
-              }}
-            >
-              <strong>Window:</strong> [{state.base},{" "}
-              {Math.min(state.base + state.windowSize - 1, state.nextSeq - 1)}]
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* CSS Animations */}
+        <div style={{ marginBottom: 22, padding: 18, borderRadius: 22, background: "rgba(255,255,255,0.8)", border: "1px solid rgba(148,163,184,0.28)", boxShadow: "0 18px 40px rgba(15,23,42,0.08)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, max-content))", gap: 12, alignItems: "end" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontWeight: 700 }}>
+              Window Size
+              <input
+                type="number"
+                min={1}
+                max={TOTAL}
+                value={windowSize}
+                disabled={running}
+                onChange={(event) => {
+                  if (running) return;
+                  const nextWindow = Math.max(1, Math.min(TOTAL, Number(event.target.value) || 1));
+                  setWindowSize(nextWindow);
+                  resetView(nextWindow);
+                }}
+                style={{ width: 120, padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(148,163,184,0.45)", background: "#fff" }}
+              />
+            </label>
+            <button onClick={() => { if (!complete) { setRunning(true); runStep(); } }} disabled={running || complete} style={{ padding: "12px 18px", borderRadius: 14, border: "none", color: "#fff", fontWeight: 800, cursor: running || complete ? "not-allowed" : "pointer", opacity: running || complete ? 0.45 : 1, background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)" }}>Start</button>
+            <button onClick={() => setRunning(false)} disabled={!running} style={{ padding: "12px 18px", borderRadius: 14, border: "none", color: "#fff", fontWeight: 800, cursor: !running ? "not-allowed" : "pointer", opacity: !running ? 0.45 : 1, background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" }}>Stop</button>
+            <button onClick={() => resetView(windowSize)} style={{ padding: "12px 18px", borderRadius: 14, border: "none", color: "#fff", fontWeight: 800, cursor: "pointer", background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>Reset</button>
+            <button onClick={() => setLossFrame(true)} disabled={!running || lossFrame} style={{ padding: "12px 18px", borderRadius: 14, border: "none", color: "#fff", fontWeight: 800, cursor: !running || lossFrame ? "not-allowed" : "pointer", opacity: !running || lossFrame ? 0.45 : 1, background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" }}>{lossFrame ? "Frame Loss Armed" : "Loss Frame"}</button>
+            <button onClick={() => setLossAck(true)} disabled={!running || lossAck} style={{ padding: "12px 18px", borderRadius: 14, border: "none", color: "#fff", fontWeight: 800, cursor: !running || lossAck ? "not-allowed" : "pointer", opacity: !running || lossAck ? 0.45 : 1, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}>{lossAck ? "ACK Loss Armed" : "Loss ACK"}</button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 22, padding: 24, borderRadius: 24, background: "linear-gradient(145deg, #312e81 0%, #1e1b4b 100%)", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.18)", boxShadow: "0 28px 60px rgba(30,27,75,0.24)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+            <h2 style={{ margin: 0, fontSize: 24 }}>Selective Repeat Flow</h2>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 13 }}>
+              <span>Sf: {state.base}</span>
+              <span>Sn: {state.nextSeq}</span>
+              <span>Rn: {state.receiverBase}</span>
+              
+            </div>
+          </div>
+          <div style={{ position: "relative", minHeight: 280 }}>
+            <div style={{ position: "absolute", left: 0, top: 28, width: 180, padding: 20, borderRadius: 20, background: "rgba(59,130,246,0.18)", border: "1px solid rgba(96,165,250,0.35)", textAlign: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>Sender</div>
+              <div style={{ fontSize: 13, opacity: 0.84, marginTop: 6 }}>Window [{state.base}, {Math.min(state.base + state.windowSize - 1, TOTAL - 1)}]</div>
+              <div style={{ fontSize: 13, opacity: 0.84, marginTop: 4 }}>Sf = {state.base}, Sn = {state.nextSeq}</div>
+            </div>
+            <div style={{ position: "absolute", right: 0, top: 28, width: 180, padding: 20, borderRadius: 20, background: "rgba(168,85,247,0.18)", border: "1px solid rgba(196,181,253,0.35)", textAlign: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>Receiver</div>
+              <div style={{ fontSize: 13, opacity: 0.84, marginTop: 6 }}>Window [{state.receiverBase}, {Math.min(state.receiverBase + state.windowSize - 1, TOTAL - 1)}]</div>
+              <div style={{ fontSize: 13, opacity: 0.84, marginTop: 4 }}>Rn = {state.receiverBase}</div>
+            </div>
+            <div style={{ position: "absolute", left: 190, right: 190, top: 56, height: 2, background: "linear-gradient(90deg, rgba(56,189,248,0.4), rgba(34,197,94,0.4))" }} />
+            <div style={{ position: "absolute", left: 190, right: 190, top: 156, height: 2, background: "linear-gradient(90deg, rgba(245,158,11,0.35), rgba(168,85,247,0.5))" }} />
+            <div style={{ position: "absolute", left: 220, top: 28, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: "rgba(226,232,240,0.7)" }}>Frames</div>
+            <div style={{ position: "absolute", left: 220, top: 128, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: "rgba(226,232,240,0.7)" }}>ACK / NAK</div>
+
+            {active ? (
+              <>
+                <Badge label={`F${active.seq}`} tone={frameTone} style={{ position: "absolute", top: 28, left: 200, animation: `srFrameTravel ${ANIM_MS}ms ease-in-out forwards` }} />
+                {!active.dataLost && (active.ackNumber !== null || active.nakNumber !== null) ? (
+                  <Badge label={active.nakNumber !== null ? `NAK ${active.nakNumber}` : `ACK ${active.ackNumber}`} tone={controlTone} style={{ position: "absolute", top: 128, right: 200, animation: `srControlTravel ${ANIM_MS}ms ease-in-out forwards` }} />
+                ) : null}
+              </>
+            ) : null}
+
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+              <div style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>Current event</div>
+                <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.6 }}>{currentLog.length > 0 ? currentLog.join(" ") : "Press Start to begin the simulation."}</div>
+              </div>
+              <div style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>Manual loss controls</div>
+                <div style={{ fontSize: 15, lineHeight: 1.6 }}>
+                  Next frame loss: <strong>{lossFrame ? "Armed" : "Off"}</strong><br />
+                  Next ACK loss: <strong>{lossAck ? "Armed" : "Off"}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
           <style>{`
-            @keyframes packageMove {
-              0% { left: 15%; opacity: 1; }
-              50% { left: 50%; }
-              100% { left: 85%; opacity: 0.7; }
+            @keyframes srFrameTravel {
+              0% { transform: translateX(0) scale(0.92); opacity: 0; }
+              20% { opacity: 1; }
+              100% { transform: translateX(calc(100vw - 820px)) scale(1); opacity: 1; }
             }
-            @keyframes ackMove {
-              0% { right: 15%; opacity: 0.7; }
-              50% { right: 50%; }
-              100% { right: 85%; opacity: 1; }
+            @keyframes srControlTravel {
+              0% { transform: translateX(0) scale(0.92); opacity: 0; }
+              20% { opacity: 1; }
+              100% { transform: translateX(calc(-100vw + 820px)) scale(1); opacity: 1; }
             }
           `}</style>
         </div>
 
-        {/* Main content */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 24,
-            marginBottom: 30,
-          }}
-        >
-          {/* Left: Visualization */}
-          <div>
-            <h3
-              style={{
-                marginTop: 0,
-                fontSize: 20,
-                fontWeight: 700,
-                marginBottom: 16,
-              }}
-            >
-              📦 Intelligent Packet Window
-            </h3>
-            <SenderWindow
-              packets={state.packets}
-              base={state.base}
-              windowSize={state.windowSize}
-            />
-            <div
-              style={{
-                marginTop: 16,
-                padding: 16,
-                background: "rgba(226, 232, 240, 0.6)",
-                borderRadius: 12,
-                border: "1px solid rgba(148, 163, 184, 0.3)",
-                fontSize: 14,
-                color: "#1e293b",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <p style={{ margin: "0 0 8px 0" }}>
-                <strong>Base (Delivery point):</strong> {state.base}
-              </p>
-              <p style={{ margin: "0 0 8px 0" }}>
-                <strong>NextSeq (Next to send):</strong> {state.nextSeq}
-              </p>
-              <p style={{ margin: 0 }}>
-                <strong>Window Range:</strong> [{state.base},{" "}
-                {Math.min(state.base + state.windowSize - 1, totalPackets - 1)}]
-              </p>
-            </div>
-          </div>
-
-          {/* Right: Stats */}
-          <div>
-            <h3
-              style={{
-                marginTop: 0,
-                fontSize: 20,
-                fontWeight: 700,
-                marginBottom: 16,
-                color: "#0f172a",
-              }}
-            >
-              📊 Statistics
-            </h3>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              {[
-                {
-                  label: "Steps",
-                  value: stepCount,
-                  color: "from-blue-400 to-blue-600",
-                },
-                {
-                  label: "Sent",
-                  value: stats.sent,
-                  color: "from-cyan-400 to-cyan-600",
-                },
-                {
-                  label: "Acked",
-                  value: stats.acked,
-                  color: "from-green-400 to-green-600",
-                },
-                {
-                  label: "Lost",
-                  value: stats.lost,
-                  color: "from-red-400 to-red-600",
-                },
-                {
-                  label: "ACK Lost",
-                  value: stats.ackLost,
-                  color: "from-yellow-400 to-yellow-600",
-                },
-                {
-                  label: "Retries",
-                  value: stats.retries,
-                  color: "from-orange-400 to-orange-600",
-                },
-              ].map((stat, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: `linear-gradient(135deg, ${stat.color})`,
-                    padding: 20,
-                    borderRadius: 12,
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    textAlign: "center",
-                    boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      opacity: 0.9,
-                      marginBottom: 8,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {stat.label}
-                  </div>
-                  <div style={{ fontSize: 32, fontWeight: 800 }}>
-                    {stat.value}
-                  </div>
-                </div>
+        <div style={{ display: "grid", gap: 18, gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(300px, 0.9fr)", alignItems: "start" }}>
+          <div style={{ padding: 20, borderRadius: 22, background: "rgba(255,255,255,0.82)", border: "1px solid rgba(148,163,184,0.28)" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 14, fontSize: 20 }}>Sender Frames</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 12 }}>
+              {state.packets.map((packet) => (
+                <FrameCard
+                  key={`sender-${packet.seq}`}
+                  title={`F${packet.seq}`}
+                  styleTuple={senderStyles[senderStatus(packet)]}
+                  packetLabel={`Retry: ${packet.retryCount}`}
+                  highlight={packet.seq >= state.base && packet.seq < state.base + state.windowSize && !packet.ackReceived}
+                />
               ))}
             </div>
+          </div>
 
-            {/* Progress */}
-            <div
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: 12,
-                padding: 16,
-                border: "1px solid rgba(255,255,255,0.2)",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 12,
-                  fontSize: 14,
-                }}
-              >
-                <span>
-                  <strong>Completion</strong>
-                </span>
-                <span
-                  style={{ fontSize: 18, fontWeight: 800, color: "#4ade80" }}
-                >
-                  {completionPercent}%
-                </span>
-              </div>
-              <div
-                style={{
-                  width: "100%",
-                  height: 12,
-                  background: "rgba(255,255,255,0.2)",
-                  borderRadius: 6,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${completionPercent}%`,
-                    height: "100%",
-                    background: "linear-gradient(90deg, #4ade80, #22c55e)",
-                    transition: "width 0.3s ease",
-                    borderRadius: 6,
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                background: "rgba(101, 184, 143, 0.2)",
-                border: "1px solid rgba(101, 184, 143, 0.5)",
-                borderRadius: 8,
-                fontSize: 14,
-              }}
-            >
-              <strong>✅ Selective Retries:</strong> Only lost packets (
-              {stats.selectiveRetries} detected)
+          <div style={{ padding: 20, borderRadius: 22, background: "rgba(255,255,255,0.82)", border: "1px solid rgba(148,163,184,0.28)" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 14, fontSize: 20 }}>Receiver Frames</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 12 }}>
+              {state.packets.map((packet) => (
+                <FrameCard
+                  key={`receiver-${packet.seq}`}
+                  title={`R${packet.seq}`}
+                  styleTuple={receiverStyles[receiverStatus(packet, state)]}
+                  highlight={packet.seq === state.receiverBase}
+                />
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Info Panel */}
-        <div
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
-            border: "2px solid rgba(255,255,255,0.2)",
-            borderRadius: 16,
-            padding: 28,
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <h3
-            style={{
-              marginTop: 0,
-              fontSize: 20,
-              fontWeight: 700,
-              marginBottom: 16,
-            }}
-          >
-            ℹ️ Protocol Characteristics
-          </h3>
-          <ul
-            style={{
-              margin: 0,
-              paddingLeft: 20,
-              fontSize: 15,
-              lineHeight: 1.8,
-            }}
-          >
-            <li>
-              <strong>Window Size:</strong> {state.windowSize} packets sent
-              independently
-            </li>
-            <li>
-              <strong>Selective ACK:</strong> Each packet individually
-              acknowledged
-            </li>
-            <li>
-              <strong>Retransmission:</strong> Only lost packets are
-              retransmitted
-            </li>
-            <li>
-              <strong>Efficiency:</strong> Highest - optimal use of bandwidth
-            </li>
-            <li>
-              <strong>Modern:</strong> Used in TCP with SACK, QUIC, and modern
-              protocols
-            </li>
-            <li>
-              <strong>Use Case:</strong> High-performance networks, wireless,
-              satellite
-            </li>
-          </ul>
+          <div style={{ padding: 20, borderRadius: 22, background: "rgba(255,255,255,0.82)", border: "1px solid rgba(148,163,184,0.28)" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 14, fontSize: 20 }}>Event Order</h3>
+            <div style={{ display: "grid", gap: 10 }}>
+              {timeline.length > 0 ? timeline.map((entry, index) => (
+                <div key={`${entry}-${index}`} style={{ padding: "12px 14px", borderRadius: 14, background: index === 0 ? "#f3e8ff" : "#f8fafc", border: "1px solid rgba(148,163,184,0.22)", color: "#0f172a", fontSize: 14, lineHeight: 1.5 }}>
+                  {entry}
+                </div>
+              )) : (
+                <div style={{ padding: "12px 14px", borderRadius: 14, background: "#f8fafc", border: "1px solid rgba(148,163,184,0.22)", color: "#475569" }}>
+                  Transmission events will appear here in the order they happen.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default SR;
+}
