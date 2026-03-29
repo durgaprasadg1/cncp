@@ -185,7 +185,10 @@ export default function GBNPage() {
       return;
     }
 
-    if (events.length === 1 && events[0] === "All frames have been acknowledged.") {
+    if (
+      events.length === 1 &&
+      events[0] === "All frames have been acknowledged."
+    ) {
       toast.success("All frames were delivered successfully.");
       return;
     }
@@ -350,15 +353,7 @@ export default function GBNPage() {
       : "warning";
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 28%), linear-gradient(135deg, #eef6ff 0%, #dce8f7 100%)",
-        padding: "32px 20px 48px",
-        color: "#0f172a",
-      }}
-    >
+    <div>
       {showDialog && (
         <div
           style={{
@@ -394,8 +389,9 @@ export default function GBNPage() {
               style={{ margin: "0 0 14px", color: "#334155", lineHeight: 1.6 }}
             >
               Controls: pick window size before starting, then use
-              Start/Stop/Reset. Press &quot;Loss Frame&quot; or &quot;Loss ACK&quot; once to drop
-              the next frame or ACK and see how recovery works.
+              Start/Stop/Reset. Press &quot;Loss Frame&quot; or &quot;Loss
+              ACK&quot; once to drop the next frame or ACK and see how recovery
+              works.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
@@ -417,21 +413,23 @@ export default function GBNPage() {
           </div>
         </div>
       )}
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ marginBottom: 28 }}>
           <Link href="/">
             <button
               style={{
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "1px solid rgba(15, 23, 42, 0.14)",
-                background: "rgba(255,255,255,0.85)",
-                color: "#0f172a",
+                padding: "10px 20px",
+                background: "rgba(30, 41, 59, 0.1)",
+                border: "2px solid rgba(15, 23, 42, 0.2)",
+                borderRadius: 8,
+                color: "#1e293b",
                 cursor: "pointer",
-                fontWeight: 700,
+                fontWeight: 600,
+                transition: "all 0.3s ease",
+                marginBottom: 20,
               }}
             >
-              Back to Home
+              ← Back to Home
             </button>
           </Link>
         </div>
