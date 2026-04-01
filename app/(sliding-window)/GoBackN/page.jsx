@@ -12,12 +12,12 @@ import { toast } from "sonner";
 import { createPackets } from "../../../utils/packet";
 import { goBackN } from "../../../protocols/goBackN";
 
-const TOTAL_PACKETS = 12;
+const DEFAULT_PACKETS = 12;
 const DATA_LOSS_RATE = 0;
 const ACK_LOSS_RATE = 0;
 const TIMEOUT_STEPS = 4;
-const TICK_MS = 3000;
-const ANIMATION_MS = 2200;
+const TICK_MS = 6000;
+const ANIMATION_MS = 5500;
 
 const senderStyles = {
   pending: { bg: "#e2e8f0", color: "#0f172a", label: "Pending" },
@@ -39,9 +39,9 @@ const receiverStyles = {
   acklost: { bg: "#f59e0b", color: "#1f2937", label: "ACK lost" },
 };
 
-function buildState(windowSize) {
+function buildState(windowSize, totalPackets) {
   return {
-    packets: createPackets(TOTAL_PACKETS),
+    packets: createPackets(totalPackets),
     base: 0,
     nextSeq: 0,
     windowSize,
@@ -147,7 +147,8 @@ function TransmissionBadge({ label, tone, style }) {
 
 export default function GBNPage() {
   const [windowSize, setWindowSize] = useState(4);
-  const [state, setState] = useState(() => buildState(4));
+  const [totalPackets, setTotalPackets] = useState(DEFAULT_PACKETS);
+  const [state, setState] = useState(() => buildState(4, DEFAULT_PACKETS));
   const [running, setRunning] = useState(false);
   const [lossFrame, setLossFrame] = useState(false);
   const [lossAck, setLossAck] = useState(false);
@@ -160,9 +161,9 @@ export default function GBNPage() {
 
   const stats = useMemo(() => getStats(state.packets), [state.packets]);
   const complete =
-    state.base >= TOTAL_PACKETS && state.nextSeq >= TOTAL_PACKETS;
+    state.base >= totalPackets && state.nextSeq >= totalPackets;
 
-  const progress = ((stats.acked / TOTAL_PACKETS) * 100).toFixed(1);
+  const progress = ((stats.acked / totalPackets) * 100).toFixed(1);
 
   const pushToasts = (transmission, events) => {
     if (!transmission || transmission.type === "idle") return;
@@ -262,7 +263,7 @@ export default function GBNPage() {
       setLossFrame(false);
       setLossAck(false);
       shouldStop =
-        nextState.base >= TOTAL_PACKETS && nextState.nextSeq >= TOTAL_PACKETS;
+        nextState.base >= totalPackets && nextState.nextSeq >= totalPackets;
 
       return {
         ...nextState,
@@ -327,17 +328,29 @@ export default function GBNPage() {
     setCurrentLog([]);
     setAnimation(null);
     lastToastRef.current = "";
-    setState(buildState(windowSize));
+    setState(buildState(windowSize, totalPackets));
   };
 
   const handleWindowChange = (value) => {
     if (running) return;
-    const nextWindow = Math.max(1, Math.min(TOTAL_PACKETS, Number(value) || 1));
+    const nextWindow = Math.max(1, Math.min(totalPackets, Number(value) || 1));
     setWindowSize(nextWindow);
     setCurrentLog([]);
     setAnimation(null);
     lastToastRef.current = "";
-    setState(buildState(nextWindow));
+    setState(buildState(nextWindow, totalPackets));
+  };
+
+  const handlePacketCountChange = (value) => {
+    if (running) return;
+    const nextTotal = Math.max(1, Math.min(60, Number(value) || 1));
+    const nextWindow = Math.min(windowSize, nextTotal);
+    setTotalPackets(nextTotal);
+    setWindowSize(nextWindow);
+    setCurrentLog([]);
+    setAnimation(null);
+    lastToastRef.current = "";
+    setState(buildState(nextWindow, nextTotal));
   };
 
   const activeTransmission = animation?.transmission;
@@ -572,9 +585,35 @@ export default function GBNPage() {
               gridTemplateColumns:
                 "repeat(auto-fit, minmax(140px, max-content))",
               gap: 12,
-              alignItems: "end",
+                alignItems: "end",
             }}
           >
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Total Frames
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={totalPackets}
+                disabled={running}
+                onChange={(event) => handlePacketCountChange(event.target.value)}
+                style={{
+                  width: 140,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(148, 163, 184, 0.45)",
+                  background: "#ffffff",
+                }}
+              />
+            </label>
             <label
               style={{
                 display: "flex",
@@ -588,7 +627,7 @@ export default function GBNPage() {
               <input
                 type="number"
                 min={1}
-                max={TOTAL_PACKETS}
+                max={totalPackets}
                 value={windowSize}
                 disabled={running}
                 onChange={(event) => handleWindowChange(event.target.value)}
@@ -735,7 +774,7 @@ export default function GBNPage() {
               <span>Base: {state.base}</span>
               <span>NextSeq: {state.nextSeq}</span>
               <span>Receiver expects: F{state.receiverExpected}</span>
-              <span>One step every: 3 seconds</span>
+              <span>One step every: 6 seconds</span>
               <span>Timeout after: {TIMEOUT_STEPS} ticks</span>
             </div>
           </div>
@@ -757,8 +796,7 @@ export default function GBNPage() {
               <div style={{ fontSize: 15, fontWeight: 800 }}>Sender</div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
                 Window [{state.base},{" "}
-                {Math.min(state.base + state.windowSize - 1, TOTAL_PACKETS - 1)}
-                ]
+                {Math.min(state.base + state.windowSize - 1, totalPackets - 1)}]
               </div>
             </div>
 

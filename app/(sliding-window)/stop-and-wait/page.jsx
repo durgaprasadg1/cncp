@@ -10,10 +10,13 @@ const SNW = () => {
   const TIMER_MIN = 5;
   const TIMER_MAX = 7;
   const TICK_MS = 1000;
-  const TRAVEL_SECONDS = 2;
+  const TRAVEL_MIN = 5;
+  const TRAVEL_MAX = 7;
 
   const nextTimerSeconds = () =>
     Math.floor(Math.random() * (TIMER_MAX - TIMER_MIN + 1)) + TIMER_MIN;
+  const nextTravelSeconds = () =>
+    Math.floor(Math.random() * (TRAVEL_MAX - TRAVEL_MIN + 1)) + TRAVEL_MIN;
 
   const [totalPackets, setTotalPackets] = useState(10);
   const [packets, setPackets] = useState(createPackets(10));
@@ -21,6 +24,7 @@ const SNW = () => {
   const [phase, setPhase] = useState("idle");
   const [countdown, setCountdown] = useState(0);
   const [travelRemaining, setTravelRemaining] = useState(0);
+  const [travelDuration, setTravelDuration] = useState(TRAVEL_MIN);
   const [losePacket, setLosePacket] = useState(false);
   const [loseAck, setLoseAck] = useState(false);
   const [sendCycle, setSendCycle] = useState(0);
@@ -43,7 +47,9 @@ const SNW = () => {
     setLosePacket(false);
     setLoseAck(false);
     setSendCycle((c) => c + 1);
-    setTravelRemaining(TRAVEL_SECONDS);
+    const travelSeconds = nextTravelSeconds();
+    setTravelDuration(travelSeconds);
+    setTravelRemaining(travelSeconds);
     setPackets((prev) => {
       const next = [...prev];
       const packet = next[index];
@@ -59,7 +65,9 @@ const SNW = () => {
     setPhase("ack");
     setLoseAck(false);
     setAckCycle((c) => c + 1);
-    setTravelRemaining(TRAVEL_SECONDS);
+    const travelSeconds = nextTravelSeconds();
+    setTravelDuration(travelSeconds);
+    setTravelRemaining(travelSeconds);
   };
 
   useEffect(() => {
@@ -82,7 +90,9 @@ const SNW = () => {
           toast.info(`Packet ${current} reached receiver.`);
           prepareAck();
           setCountdown(nextTimerSeconds());
-          setTravelRemaining(TRAVEL_SECONDS);
+          const travelSeconds = nextTravelSeconds();
+          setTravelDuration(travelSeconds);
+          setTravelRemaining(travelSeconds);
           return;
         }
 
@@ -101,7 +111,9 @@ const SNW = () => {
           setLosePacket(false);
           prepareSend(current);
           setCountdown(nextTimerSeconds());
-          setTravelRemaining(TRAVEL_SECONDS);
+          const travelSeconds = nextTravelSeconds();
+          setTravelDuration(travelSeconds);
+          setTravelRemaining(travelSeconds);
           return;
         }
       }
@@ -130,7 +142,9 @@ const SNW = () => {
 
           prepareSend(nextPacket);
           setCountdown(nextTimerSeconds());
-          setTravelRemaining(TRAVEL_SECONDS);
+          const travelSeconds = nextTravelSeconds();
+          setTravelDuration(travelSeconds);
+          setTravelRemaining(travelSeconds);
           return;
         }
 
@@ -150,7 +164,9 @@ const SNW = () => {
           setLoseAck(false);
           prepareSend(current);
           setCountdown(nextTimerSeconds());
-          setTravelRemaining(TRAVEL_SECONDS);
+          const travelSeconds = nextTravelSeconds();
+          setTravelDuration(travelSeconds);
+          setTravelRemaining(travelSeconds);
           return;
         }
       }
@@ -567,7 +583,7 @@ const SNW = () => {
                   top: 15,
                   left: "15%",
                   animationName: "packageMove",
-                  animationDuration: `${TRAVEL_SECONDS}s`,
+                  animationDuration: `${travelDuration}s`,
                   animationTimingFunction: "ease-in-out",
                   animationIterationCount: 1,
                   animationFillMode: "forwards",
@@ -606,7 +622,7 @@ const SNW = () => {
                   top: 115,
                   right: "15%",
                   animationName: "ackMove",
-                  animationDuration: `${TRAVEL_SECONDS}s`,
+                  animationDuration: `${travelDuration}s`,
                   animationTimingFunction: "ease-in-out",
                   animationIterationCount: 1,
                   animationFillMode: "forwards",
