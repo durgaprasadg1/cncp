@@ -12,10 +12,10 @@ import { toast } from "sonner";
 import { createPackets } from "../../../utils/packet";
 import { selectiveRepeat } from "../../../protocols/selectiveRepeat";
 
-const TOTAL = 12;
+const DEFAULT_PACKETS = 12;
 const TIMEOUT = 6;
-const TICK_MS = 3000;
-const ANIM_MS = 2200;
+const TICK_MS = 6000;
+const ANIM_MS = 5500;
 const MAX_LOGS = 10;
 
 const senderStyles = {
@@ -59,9 +59,9 @@ const toneStyles = {
   ],
 };
 
-function buildState(windowSize) {
+function buildState(windowSize, totalPackets) {
   return {
-    packets: createPackets(TOTAL).map((packet) => ({
+    packets: createPackets(totalPackets).map((packet) => ({
       ...packet,
       receiverBuffered: false,
       receiverDelivered: false,
@@ -169,7 +169,8 @@ function FrameCard({ title, packetLabel, styleTuple, extra, highlight }) {
 
 export default function SelectiveRepeatPage() {
   const [windowSize, setWindowSize] = useState(4);
-  const [state, setState] = useState(() => buildState(4));
+  const [totalPackets, setTotalPackets] = useState(DEFAULT_PACKETS);
+  const [state, setState] = useState(() => buildState(4, DEFAULT_PACKETS));
   const [running, setRunning] = useState(false);
   const [lossFrame, setLossFrame] = useState(false);
   const [lossAck, setLossAck] = useState(false);
@@ -181,8 +182,8 @@ export default function SelectiveRepeatPage() {
   const lastToastRef = useRef("");
 
   const stats = useMemo(() => statsFrom(state.packets), [state.packets]);
-  const complete = state.base >= TOTAL && state.nextSeq >= TOTAL;
-  const progress = ((stats.acked / TOTAL) * 100).toFixed(1);
+  const complete = state.base >= totalPackets && state.nextSeq >= totalPackets;
+  const progress = ((stats.acked / totalPackets) * 100).toFixed(1);
 
   const pushToasts = (tx, events) => {
     if (!tx || tx.type === "idle") return;
@@ -248,7 +249,7 @@ export default function SelectiveRepeatPage() {
       pushToasts(next.lastTransmission, logs);
       setLossFrame(false);
       setLossAck(false);
-      shouldStop = next.base >= TOTAL && next.nextSeq >= TOTAL;
+      shouldStop = next.base >= totalPackets && next.nextSeq >= totalPackets;
       return { ...next, forceDataLoss: false, forceAckLoss: false };
     });
     if (shouldStop) setRunning(false);
@@ -277,7 +278,7 @@ export default function SelectiveRepeatPage() {
     return () => clearTimeout(timeout);
   }, [animation]);
 
-  const resetView = (nextWindow) => {
+  const resetView = (nextWindow, nextTotal) => {
     setRunning(false);
     setLossFrame(false);
     setLossAck(false);
@@ -285,7 +286,16 @@ export default function SelectiveRepeatPage() {
     setTimeline([]);
     setAnimation(null);
     lastToastRef.current = "";
-    setState(buildState(nextWindow));
+    setState(buildState(nextWindow, nextTotal ?? totalPackets));
+  };
+
+  const handlePacketCountChange = (value) => {
+    if (running) return;
+    const nextTotal = Math.max(1, Math.min(60, Number(value) || 1));
+    const nextWindow = Math.min(windowSize, nextTotal);
+    setTotalPackets(nextTotal);
+    setWindowSize(nextWindow);
+    resetView(nextWindow, nextTotal);
   };
 
   const active = animation?.tx;
@@ -531,18 +541,44 @@ export default function SelectiveRepeatPage() {
                 fontWeight: 700,
               }}
             >
+              Total Frames
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={totalPackets}
+                disabled={running}
+                onChange={(event) => handlePacketCountChange(event.target.value)}
+                style={{
+                  width: 120,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(148,163,184,0.45)",
+                  background: "#fff",
+                }}
+              />
+            </label>
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
               Window Size
               <input
                 type="number"
                 min={1}
-                max={TOTAL}
+                max={totalPackets}
                 value={windowSize}
                 disabled={running}
                 onChange={(event) => {
                   if (running) return;
                   const nextWindow = Math.max(
                     1,
-                    Math.min(TOTAL, Number(event.target.value) || 1),
+                    Math.min(totalPackets, Number(event.target.value) || 1),
                   );
                   setWindowSize(nextWindow);
                   resetView(nextWindow);
@@ -693,7 +729,7 @@ export default function SelectiveRepeatPage() {
               <div style={{ fontSize: 15, fontWeight: 800 }}>Sender</div>
               <div style={{ fontSize: 13, opacity: 0.84, marginTop: 6 }}>
                 Window [{state.base},{" "}
-                {Math.min(state.base + state.windowSize - 1, TOTAL - 1)}]
+                {Math.min(state.base + state.windowSize - 1, totalPackets - 1)}]
               </div>
               <div style={{ fontSize: 13, opacity: 0.84, marginTop: 4 }}>
                 Sf = {state.base}, Sn = {state.nextSeq}
@@ -715,8 +751,10 @@ export default function SelectiveRepeatPage() {
               <div style={{ fontSize: 15, fontWeight: 800 }}>Receiver</div>
               <div style={{ fontSize: 13, opacity: 0.84, marginTop: 6 }}>
                 Window [{state.receiverBase},{" "}
-                {Math.min(state.receiverBase + state.windowSize - 1, TOTAL - 1)}
-                ]
+                {Math.min(
+                  state.receiverBase + state.windowSize - 1,
+                  totalPackets - 1,
+                )}]
               </div>
               <div style={{ fontSize: 13, opacity: 0.84, marginTop: 4 }}>
                 Rn = {state.receiverBase}
