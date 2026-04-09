@@ -1,32 +1,32 @@
-export default function Packet({ packet, inWindow }) {
-  let color = "#e0e0e0";
+export default function Packet({ packet, inWindow, isDark = true }) {
+  let color = "#7c8fb3";
   let statusText = "Pending";
   let glowColor = "transparent";
 
   if (packet.status === "sent") {
-    color = "#2196F3";
+    color = isDark ? "#00d4ff" : "#0284c7";
     statusText = "Sent";
-    glowColor = "rgba(33, 150, 243, 0.4)";
+    glowColor = isDark ? "rgba(0, 212, 255, 0.6)" : "rgba(2, 132, 199, 0.6)";
   }
   if (packet.status === "ack") {
-    color = "#4CAF50";
+    color = isDark ? "#00f0ff" : "#0ea5e9";
     statusText = "ACK";
-    glowColor = "rgba(76, 175, 80, 0.4)";
+    glowColor = isDark ? "rgba(0, 240, 255, 0.6)" : "rgba(14, 165, 233, 0.6)";
   }
   if (packet.status === "lost") {
-    color = "#F44336";
+    color = "#ff1744";
     statusText = "Lost";
-    glowColor = "rgba(244, 67, 54, 0.6)";
+    glowColor = "rgba(255, 23, 68, 0.8)";
   }
   if (packet.status === "ack-lost") {
-    color = "#EAB308";
+    color = "#ffd60a";
     statusText = "ACK Lost";
-    glowColor = "rgba(234, 179, 8, 0.6)";
+    glowColor = "rgba(255, 214, 10, 0.8)";
   }
   if (packet.status === "retrying") {
-    color = "#FF9800";
+    color = isDark ? "#a855f7" : "#7c3aed";
     statusText = "Retry";
-    glowColor = "rgba(255, 152, 0, 0.8)";
+    glowColor = isDark ? "rgba(168, 85, 247, 0.8)" : "rgba(124, 58, 237, 0.8)";
   }
 
   return (
@@ -36,19 +36,19 @@ export default function Packet({ packet, inWindow }) {
         height: 70,
         background: color,
         border: inWindow
-          ? "3px solid white"
-          : "2px solid rgba(255,255,255,0.5)",
+          ? isDark ? "3px solid #f0f5ff" : "3px solid #1a1f3a"
+          : isDark ? "2px solid rgba(240, 245, 255, 0.4)" : "2px solid rgba(26, 31, 58, 0.4)",
         borderRadius: 8,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "white",
+        color: isDark ? "#0a0e27" : "#ffffff",
         fontWeight: 700,
         fontSize: 20,
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         boxShadow: inWindow
-          ? `0 0 20px ${glowColor}, 0 8px 16px rgba(0,0,0,0.25)`
-          : `0 4px 8px rgba(0,0,0,0.2)`,
+          ? `0 0 25px ${glowColor}, 0 8px 16px rgba(0,0,0,0.4)`
+          : `0 4px 8px rgba(0,0,0,0.3)`,
         position: "relative",
         cursor: "pointer",
         transform: inWindow ? "scale(1.1)" : "scale(1)",
@@ -71,7 +71,7 @@ export default function Packet({ packet, inWindow }) {
           style={{
             position: "absolute",
             inset: -8,
-            border: "2px solid rgba(255,255,255,0.6)",
+            border: isDark ? "2px solid rgba(0, 212, 255, 0.8)" : "2px solid rgba(2, 132, 199, 0.8)",
             borderRadius: 8,
             animation: "pulse 2s ease-in-out infinite",
           }}
