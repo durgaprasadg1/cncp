@@ -21,10 +21,11 @@ export default function SimulationControls({
       style={{
         padding: 16,
         borderRadius: 14,
-        border: "1px solid rgba(148, 163, 184, 0.35)",
-        background: "rgba(255,255,255,0.7)",
+        border: "1px solid rgba(0, 212, 255, 0.3)",
+        background: "rgba(26, 31, 58, 0.8)",
         backdropFilter: "blur(8px)",
         marginBottom: 24,
+        boxShadow: "0 0 20px rgba(0, 212, 255, 0.1)",
       }}
     >
       <div
@@ -41,7 +42,7 @@ export default function SimulationControls({
             gap: 8,
             fontSize: 13,
             fontWeight: 600,
-            color: "#0f172a",
+            color: "#00d4ff",
           }}
         >
           Frames
@@ -56,7 +57,9 @@ export default function SimulationControls({
             style={{
               padding: 8,
               borderRadius: 8,
-              border: "1px solid rgba(148, 163, 184, 0.6)",
+              border: "1px solid rgba(0, 212, 255, 0.5)",
+              background: "rgba(0, 212, 255, 0.05)",
+              color: "#f0f5ff",
             }}
           />
         </label>
@@ -69,7 +72,7 @@ export default function SimulationControls({
               gap: 8,
               fontSize: 13,
               fontWeight: 600,
-              color: "#0f172a",
+              color: "#a855f7",
             }}
           >
             Window Size
@@ -84,7 +87,9 @@ export default function SimulationControls({
               style={{
                 padding: 8,
                 borderRadius: 8,
-                border: "1px solid rgba(148, 163, 184, 0.6)",
+                border: "1px solid rgba(168, 85, 247, 0.5)",
+                background: "rgba(168, 85, 247, 0.05)",
+                color: "#f0f5ff",
               }}
             />
           </label>
@@ -97,7 +102,7 @@ export default function SimulationControls({
             gap: 8,
             fontSize: 13,
             fontWeight: 600,
-            color: "#0f172a",
+            color: "#00f0ff",
           }}
         >
           Data Loss ({Math.round(settings.dataLossRate * 100)}%)
@@ -108,6 +113,9 @@ export default function SimulationControls({
             step={1}
             value={Math.round(settings.dataLossRate * 100)}
             onChange={(e) => updatePercent("dataLossRate", e.target.value)}
+            style={{
+              accentColor: "#00d4ff",
+            }}
           />
         </label>
 
@@ -118,7 +126,7 @@ export default function SimulationControls({
             gap: 8,
             fontSize: 13,
             fontWeight: 600,
-            color: "#0f172a",
+            color: "#a855f7",
           }}
         >
           ACK Loss ({Math.round(settings.ackLossRate * 100)}%)
@@ -129,6 +137,9 @@ export default function SimulationControls({
             step={1}
             value={Math.round(settings.ackLossRate * 100)}
             onChange={(e) => updatePercent("ackLossRate", e.target.value)}
+            style={{
+              accentColor: "#a855f7",
+            }}
           />
         </label>
 
@@ -139,7 +150,7 @@ export default function SimulationControls({
             gap: 8,
             fontSize: 13,
             fontWeight: 600,
-            color: "#0f172a",
+            color: "#00f0ff",
           }}
         >
           Speed
@@ -149,7 +160,9 @@ export default function SimulationControls({
             style={{
               padding: 8,
               borderRadius: 8,
-              border: "1px solid rgba(148, 163, 184, 0.6)",
+              border: "1px solid rgba(0, 240, 255, 0.5)",
+              background: "rgba(0, 240, 255, 0.05)",
+              color: "#f0f5ff",
             }}
           >
             <option value={250}>Very Fast (250ms)</option>
@@ -168,18 +181,19 @@ export default function SimulationControls({
           onClick={onApply}
           style={{
             padding: "10px 20px",
-            background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
+            background: "linear-gradient(135deg, #00d4ff 0%, #a855f7 100%)",
             border: "none",
             borderRadius: 10,
-            color: "white",
+            color: "#0a0e27",
             cursor: "pointer",
             fontWeight: 700,
             letterSpacing: 0.4,
+            boxShadow: "0 0 15px rgba(0, 212, 255, 0.3)",
           }}
         >
           Apply Settings
         </button>
-        <p style={{ margin: 0, fontSize: 12, color: "#475569" }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#a0aec0" }}>
           Applying settings resets the current simulation.
         </p>
       </div>

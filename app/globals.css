@@ -1,42 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Dark Neon Theme - NebulaPlay inspired */
+  --background: #0a0e27;
+  --foreground: #f0f5ff;
+  --card: #1a1f3a;
+  --card-foreground: #e0e8ff;
+  --popover: #1a1f3a;
+  --popover-foreground: #e0e8ff;
+  --primary: #00d4ff;
+  --primary-foreground: #0a0e27;
+  --secondary: #a855f7;
+  --secondary-foreground: #f0f5ff;
+  --muted: #2d3854;
+  --muted-foreground: #a0aec0;
+  --accent: #00f0ff;
+  --accent-foreground: #0a0e27;
+  --destructive: #ff1744;
+  --border: #2d3854;
+  --input: #1a1f3a;
+  --ring: #00d4ff;
   --radius: 0.625rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0.00 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #0a0e27;
+  --foreground: #f0f5ff;
+  --card: #1a1f3a;
+  --card-foreground: #e0e8ff;
+  --popover: #1a1f3a;
+  --popover-foreground: #e0e8ff;
+  --primary: #00d4ff;
+  --primary-foreground: #0a0e27;
+  --secondary: #a855f7;
+  --secondary-foreground: #f0f5ff;
+  --muted: #2d3854;
+  --muted-foreground: #a0aec0;
+  --accent: #00f0ff;
+  --accent-foreground: #0a0e27;
+  --destructive: #ff1744;
+  --border: #2d3854;
+  --input: #1a1f3a;
+  --ring: #00d4ff;
+}
+
+.light {
+  --background: #f0f4f8;
+  --foreground: #1a1f3a;
+  --card: #e8f1f6;
+  --card-foreground: #1a1f3a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1f3a;
+  --primary: #0284c7;
+  --primary-foreground: #ffffff;
+  --secondary: #7c3aed;
+  --secondary-foreground: #ffffff;
+  --muted: #e8f1f6;
+  --muted-foreground: #475569;
+  --accent: #0ea5e9;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: #cbd5e1;
+  --input: #e8f1f6;
+  --ring: #0284c7;
 }
 
 * {
@@ -135,17 +161,30 @@ html {
   animation: packet-send 1s ease-in-out infinite;
 }
 
-/* Gradient backgrounds */
+/* Gradient backgrounds - Neon theme */
 .gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00d4ff 0%, #a855f7 100%);
 }
 
 .gradient-secondary {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #00f0ff 0%, #00d4ff 100%);
+}
+
+/* Neon glow effects */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.3);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(217, 70, 239, 0.3);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
 }
 
 /* Glass morphism effect */

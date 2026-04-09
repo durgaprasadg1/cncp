@@ -4,9 +4,33 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import SenderWindow from "../../components/SenderWindow";
 import { createPackets } from "../../../utils/packet";
+import { getThemeColors } from "../../../utils/theme";
 import { toast } from "sonner";
 
 const SNW = () => {
+  const [isDark, setIsDark] = useState(true);
+  const colors = getThemeColors(isDark);
+
+  // Listen for theme changes
+  useEffect(() => {
+    const handleThemeChange = (event) => {
+      const newTheme = event.detail?.theme || localStorage.getItem("theme") || "dark";
+      setIsDark(newTheme === "dark");
+    };
+
+    // Listen for custom theme change event
+    window.addEventListener("themechange", handleThemeChange);
+    // Also listen for storage changes (other tabs)
+    window.addEventListener("storage", handleThemeChange);
+    // Check initial theme
+    const theme = localStorage.getItem("theme") || "dark";
+    setIsDark(theme === "dark");
+
+    return () => {
+      window.removeEventListener("themechange", handleThemeChange);
+      window.removeEventListener("storage", handleThemeChange);
+    };
+  }, []);
   const TIMER_MIN = 5;
   const TIMER_MAX = 7;
   const TICK_MS = 1000;
@@ -265,7 +289,7 @@ const SNW = () => {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15,23,42,0.45)",
+            background: isDark ? "rgba(10, 14, 39, 0.7)" : "rgba(240, 244, 248, 0.7)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -276,23 +300,24 @@ const SNW = () => {
           <div
             style={{
               width: "min(520px, 100%)",
-              background: "#ffffff",
+              background: isDark ? "#1a1f3a" : "#e8f1f6",
               borderRadius: 16,
               padding: 24,
-              boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
-              color: "#0f172a",
+              boxShadow: isDark ? "0 24px 60px rgba(0, 212, 255, 0.15)" : "0 24px 60px rgba(2, 132, 199, 0.15)",
+              color: isDark ? "#f0f5ff" : "#1a1f3a",
+              border: isDark ? "1px solid rgba(0, 212, 255, 0.3)" : "1px solid rgba(2, 132, 199, 0.3)",
             }}
           >
-            <h2 style={{ margin: "0 0 10px", fontSize: 24 }}>
+            <h2 style={{ margin: "0 0 10px", fontSize: 24, color: isDark ? "#00d4ff" : "#0284c7" }}>
               Stop-and-Wait at a glance
             </h2>
-            <p style={{ margin: "0 0 8px", color: "#334155", lineHeight: 1.6 }}>
+            <p style={{ margin: "0 0 8px", color: isDark ? "#a0aec0" : "#475569", lineHeight: 1.6 }}>
               Sends a single packet, waits for its ACK, then moves on. With
               window size 1, every loss forces a retry of the same packet before
               the next one can go.
             </p>
             <p
-              style={{ margin: "0 0 14px", color: "#334155", lineHeight: 1.6 }}
+              style={{ margin: "0 0 14px", color: isDark ? "#a0aec0" : "#475569", lineHeight: 1.6 }}
             >
               Controls: choose packet count before starting. Use
               Start/Stop/Reset to run the demo. Tap "Loss Packet" or "Loss ACK"
@@ -306,11 +331,15 @@ const SNW = () => {
                   padding: "10px 16px",
                   borderRadius: 12,
                   border: "none",
-                  background:
-                    "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-                  color: "#ffffff",
+                  background: isDark
+                    ? "linear-gradient(135deg, #00d4ff 0%, #00f0ff 100%)"
+                    : "linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)",
+                  color: isDark ? "#0a0e27" : "#ffffff",
                   fontWeight: 800,
                   cursor: "pointer",
+                  boxShadow: isDark 
+                    ? "0 0 15px rgba(0, 212, 255, 0.3)"
+                    : "0 0 15px rgba(2, 132, 199, 0.3)",
                 }}
               >
                 Got it
@@ -326,10 +355,10 @@ const SNW = () => {
             <button
               style={{
                 padding: "10px 20px",
-                background: "rgba(30, 41, 59, 0.1)",
-                border: "2px solid rgba(15, 23, 42, 0.2)",
+                background: isDark ? "rgba(0, 212, 255, 0.1)" : "rgba(2, 132, 199, 0.1)",
+                border: isDark ? "2px solid rgba(0, 212, 255, 0.4)" : "2px solid rgba(2, 132, 199, 0.3)",
                 borderRadius: 8,
-                color: "#1e293b",
+                color: isDark ? "#00d4ff" : "#0284c7",
                 cursor: "pointer",
                 fontWeight: 600,
                 transition: "all 0.3s ease",
@@ -345,16 +374,19 @@ const SNW = () => {
               fontSize: 48,
               fontWeight: 800,
               marginBottom: 8,
-              textShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              color: "#0f172a",
+              textShadow: "0 0 20px rgba(0, 212, 255, 0.3)",
+              background: "linear-gradient(135deg, #00d4ff 0%, #a855f7 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
             }}
           >
             ⏱️ Stop-and-Wait Protocol
           </h1>
           <p
-            style={{ fontSize: 18, opacity: 0.9, margin: 0, color: "#1e293b" }}
+            style={{ fontSize: 18, opacity: 0.9, margin: 0, color: isDark ? "#a0aec0" : "#475569" }}
           >
-            Window Size: <strong>1</strong> | Timer: {TIMER_MIN}-{TIMER_MAX}s
+            Window Size: <strong style={{ color: isDark ? "#00f0ff" : "#0ea5e9" }}>1</strong> | Timer: {TIMER_MIN}-{TIMER_MAX}s
           </p>
         </div>
 
@@ -374,11 +406,11 @@ const SNW = () => {
               gap: 10,
               padding: "10px 14px",
               borderRadius: 10,
-              background: "rgba(255,255,255,0.7)",
-              border: "1px solid rgba(148, 163, 184, 0.4)",
+              background: isDark ? "rgba(0, 212, 255, 0.08)" : "rgba(2, 132, 199, 0.08)",
+              border: isDark ? "1px solid rgba(0, 212, 255, 0.4)" : "1px solid rgba(2, 132, 199, 0.4)",
             }}
           >
-            <label style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: isDark ? "#00d4ff" : "#0284c7" }}>
               Packets
             </label>
             <input
@@ -392,7 +424,9 @@ const SNW = () => {
                 width: 80,
                 padding: "6px 8px",
                 borderRadius: 8,
-                border: "1px solid rgba(148, 163, 184, 0.6)",
+                border: isDark ? "1px solid rgba(0, 212, 255, 0.5)" : "1px solid rgba(2, 132, 199, 0.5)",
+                background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
+                color: isDark ? "#f0f5ff" : "#1a1f3a",
               }}
             />
           </div>
@@ -401,31 +435,31 @@ const SNW = () => {
             {
               label: "▶ Start",
               onClick: handleStart,
-              bg: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              bg: "linear-gradient(135deg, #00d4ff 0%, #00f0ff 100%)",
               disabled: running || current >= totalPackets,
             },
             {
               label: "⏹ Stop",
               onClick: handleStop,
-              bg: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+              bg: "linear-gradient(135deg, #ff1744 0%, #d32f2f 100%)",
               disabled: stopDisabled,
             },
             {
               label: "↻ Reset",
               onClick: handleReset,
-              bg: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              bg: "linear-gradient(135deg, #a855f7 0%, #d946ef 100%)",
               disabled: resetDisabled,
             },
             {
               label: "✖ Loss Packet",
               onClick: () => setLosePacket(true),
-              bg: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              bg: "linear-gradient(135deg, #ffd60a 0%, #ffba08 100%)",
               disabled: lossPacketDisabled,
             },
             {
               label: "✖ Loss ACK",
               onClick: () => setLoseAck(true),
-              bg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              bg: "linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%)",
               disabled: lossAckDisabled,
             },
           ].map((btn, idx) => (
@@ -438,7 +472,7 @@ const SNW = () => {
                 background: btn.bg,
                 border: "none",
                 borderRadius: 10,
-                color: "white",
+                color: isDark ? "#0a0e27" : "#ffffff",
                 cursor: btn.disabled ? "not-allowed" : "pointer",
                 fontWeight: 700,
                 fontSize: 14,
@@ -733,7 +767,7 @@ const SNW = () => {
             >
               📦 All Packets (Window Size = 1)
             </h3>
-            <SenderWindow packets={packets} base={current} windowSize={1} />
+            <SenderWindow packets={packets} base={current} windowSize={1} isDark={isDark} />
           </div>
 
           {/* Info Grid */}
@@ -780,10 +814,11 @@ const SNW = () => {
                 style={{
                   marginTop: 12,
                   padding: 10,
-                  background: "black",
-                  border: "1px solid rgba(244, 67, 54, 0.5)",
+                  background: isDark ? "#1a1f3a" : "#e8f1f6",
+                  border: isDark ? "1px solid rgba(244, 67, 54, 0.5)" : "1px solid rgba(220, 38, 38, 0.3)",
                   borderRadius: 8,
                   fontSize: 13,
+                  color: isDark ? "#f0f5ff" : "#1a1f3a",
                 }}
               >
                 <p style={{ margin: 0 }}>
@@ -797,15 +832,16 @@ const SNW = () => {
           <div
             style={{
               padding: 16,
-              background: "rgba(255,255,255,0.1)",
+              background: isDark ? "rgba(0, 212, 255, 0.08)" : "rgba(2, 132, 199, 0.08)",
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.2)",
+              border: isDark ? "1px solid rgba(0, 212, 255, 0.3)" : "1px solid rgba(2, 132, 199, 0.2)",
               fontSize: 14,
               backdropFilter: "blur(10px)",
+              color: isDark ? "#a0aec0" : "#475569",
             }}
           >
             <p style={{ margin: "0 0 8px 0" }}>
-              <strong>Progress:</strong> {current}/{totalPackets}
+              <strong style={{ color: isDark ? "#00d4ff" : "#0284c7" }}>Progress:</strong> {current}/{totalPackets}
             </p>
             <div
               style={{
@@ -840,33 +876,38 @@ const SNW = () => {
               {
                 label: "Sent",
                 value: stats.sent,
-                color: "from-blue-100 to-blue-200",
+                bgDark: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)",
+                bgLight: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
               },
               {
                 label: "Acked",
                 value: stats.acked,
-                color: "from-green-100 to-green-200",
+                bgDark: "linear-gradient(135deg, #14532d 0%, #166534 100%)",
+                bgLight: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
               },
               {
                 label: "Retries",
                 value: stats.totalRetryAttempts,
-                color: "from-red-100 to-red-200",
+                bgDark: "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)",
+                bgLight: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
               },
               {
                 label: "ACK Lost",
                 value: stats.ackLost,
-                color: "from-yellow-100 to-yellow-200",
+                bgDark: "linear-gradient(135deg, #78350f 0%, #92400e 100%)",
+                bgLight: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
               },
             ].map((stat, idx) => (
               <div
                 key={idx}
                 style={{
-                  background: `linear-gradient(135deg, ${stat.color})`,
+                  background: isDark ? stat.bgDark : stat.bgLight,
                   padding: 12,
                   borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.2)",
+                  border: isDark ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(0,0,0,0.1)",
                   textAlign: "center",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.15)" : "0 4px 12px rgba(0,0,0,0.1)",
+                  color: isDark ? "#f0f5ff" : "#1a1f3a",
                 }}
               >
                 <div
@@ -891,10 +932,10 @@ const SNW = () => {
         <div
           style={{
             marginTop: 24,
-            background: "rgba(255,255,255,0.1)",
+            background: isDark ? "rgba(255,255,255,0.1)" : "rgba(2, 132, 199, 0.08)",
             borderRadius: 12,
             padding: 16,
-            border: "1px solid rgba(255,255,255,0.2)",
+            border: isDark ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(2, 132, 199, 0.2)",
             backdropFilter: "blur(10px)",
           }}
         >
@@ -912,13 +953,15 @@ const SNW = () => {
       {/* Info Panel */}
       <div
         style={{
-          background:
-            "linear-gradient(135deg, rgba(248,250,252,0.9) 0%, rgba(226,232,240,0.9) 100%)",
-          border: "2px solid rgba(148, 163, 184, 0.3)",
+          background: isDark
+            ? "linear-gradient(135deg, rgba(26, 31, 58, 0.95) 0%, rgba(10, 14, 39, 0.95) 100%)"
+            : "linear-gradient(135deg, rgba(232, 241, 246, 0.95) 0%, rgba(240, 244, 248, 0.95) 100%)",
+          border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.3)",
           borderRadius: 16,
           padding: 28,
           backdropFilter: "blur(10px)",
-          color: "#0f172a",
+          color: isDark ? "#f0f5ff" : "#1a1f3a",
+          boxShadow: isDark ? "0 0 30px rgba(0, 212, 255, 0.1)" : "0 0 30px rgba(2, 132, 199, 0.1)",
         }}
       >
         <h3
@@ -927,6 +970,10 @@ const SNW = () => {
             fontSize: 20,
             fontWeight: 700,
             marginBottom: 16,
+            background: isDark ? "linear-gradient(135deg, #00d4ff 0%, #a855f7 100%)" : "linear-gradient(135deg, #0284c7 0%, #7c3aed 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
           }}
         >
           ℹ️ Protocol Characteristics & Controls
@@ -937,6 +984,7 @@ const SNW = () => {
             paddingLeft: 20,
             fontSize: 15,
             lineHeight: 1.8,
+            color: isDark ? "#a0aec0" : "#475569",
           }}
         >
           <li>
