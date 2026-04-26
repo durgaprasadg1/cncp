@@ -141,31 +141,86 @@ export default function GBNPage() {
   const colors = getThemeColors(isDark);
 
   const senderStyles = {
-    pending: { bg: isDark ? "#2d3854" : "#cbd5e1", color: isDark ? "#a0aec0" : "#1a1f3a", label: "Pending" },
-    sent: { bg: isDark ? "#00d4ff" : "#0284c7", color: isDark ? "#0a0e27" : "#ffffff", label: "Sent" },
-    retrying: { bg: isDark ? "#a855f7" : "#7c3aed", color: isDark ? "#f0f5ff" : "#ffffff", label: "Retry" },
-    lost: { bg: "#ff1744", color: isDark ? "#f0f5ff" : "#ffffff", label: "Lost" },
-    ack: { bg: isDark ? "#00f0ff" : "#0ea5e9", color: isDark ? "#0a0e27" : "#ffffff", label: "ACKed" },
-    "ack-lost": { bg: "#ffd60a", color: isDark ? "#0a0e27" : "#1a1f3a", label: "ACK lost" },
+    pending: {
+      bg: isDark ? "#2d3854" : "#cbd5e1",
+      color: isDark ? "#a0aec0" : "#1a1f3a",
+      label: "Pending",
+    },
+    sent: {
+      bg: isDark ? "#00d4ff" : "#0284c7",
+      color: isDark ? "#0a0e27" : "#ffffff",
+      label: "Sent",
+    },
+    retrying: {
+      bg: isDark ? "#a855f7" : "#7c3aed",
+      color: isDark ? "#f0f5ff" : "#ffffff",
+      label: "Retry",
+    },
+    lost: {
+      bg: "#ff1744",
+      color: isDark ? "#f0f5ff" : "#ffffff",
+      label: "Lost",
+    },
+    ack: {
+      bg: isDark ? "#00f0ff" : "#0ea5e9",
+      color: isDark ? "#0a0e27" : "#ffffff",
+      label: "ACKed",
+    },
+    "ack-lost": {
+      bg: "#ffd60a",
+      color: isDark ? "#0a0e27" : "#1a1f3a",
+      label: "ACK lost",
+    },
   };
 
   const receiverStyles = {
-    pending: { bg: isDark ? "#2d3854" : "#cbd5e1", color: isDark ? "#a0aec0" : "#1a1f3a", label: "Waiting" },
-    waiting: { bg: isDark ? "#00d4ff" : "#0284c7", color: isDark ? "#0a0e27" : "#ffffff", label: "Expected" },
-    received: { bg: isDark ? "#a855f7" : "#7c3aed", color: isDark ? "#f0f5ff" : "#ffffff", label: "Accepted" },
-    delivered: { bg: isDark ? "#00f0ff" : "#0ea5e9", color: isDark ? "#0a0e27" : "#ffffff", label: "Delivered" },
-    duplicate: { bg: "#ffd60a", color: isDark ? "#0a0e27" : "#1a1f3a", label: "Duplicate" },
-    discarded: { bg: isDark ? "#a855f7" : "#7c3aed", color: isDark ? "#f0f5ff" : "#ffffff", label: "Out of order" },
-    lost: { bg: "#ff1744", color: isDark ? "#f0f5ff" : "#ffffff", label: "Lost" },
-    acklost: { bg: "#ffd60a", color: isDark ? "#0a0e27" : "#1a1f3a", label: "ACK lost" },
+    pending: {
+      bg: isDark ? "#2d3854" : "#cbd5e1",
+      color: isDark ? "#a0aec0" : "#1a1f3a",
+      label: "Waiting",
+    },
+    waiting: {
+      bg: isDark ? "#00d4ff" : "#0284c7",
+      color: isDark ? "#0a0e27" : "#ffffff",
+      label: "Expected",
+    },
+    received: {
+      bg: isDark ? "#a855f7" : "#7c3aed",
+      color: isDark ? "#f0f5ff" : "#ffffff",
+      label: "Accepted",
+    },
+    delivered: {
+      bg: isDark ? "#00f0ff" : "#0ea5e9",
+      color: isDark ? "#0a0e27" : "#ffffff",
+      label: "Delivered",
+    },
+    duplicate: {
+      bg: "#ffd60a",
+      color: isDark ? "#0a0e27" : "#1a1f3a",
+      label: "Duplicate",
+    },
+    discarded: {
+      bg: isDark ? "#a855f7" : "#7c3aed",
+      color: isDark ? "#f0f5ff" : "#ffffff",
+      label: "Out of order",
+    },
+    lost: {
+      bg: "#ff1744",
+      color: isDark ? "#f0f5ff" : "#ffffff",
+      label: "Lost",
+    },
+    acklost: {
+      bg: "#ffd60a",
+      color: isDark ? "#0a0e27" : "#1a1f3a",
+      label: "ACK lost",
+    },
   };
 
   const timerRef = useRef(null);
   const lastToastRef = useRef("");
 
   const stats = useMemo(() => getStats(state.packets), [state.packets]);
-  const complete =
-    state.base >= totalPackets && state.nextSeq >= totalPackets;
+  const complete = state.base >= totalPackets && state.nextSeq >= totalPackets;
 
   const progress = ((stats.acked / totalPackets) * 100).toFixed(1);
 
@@ -288,7 +343,8 @@ export default function GBNPage() {
   // Listen for theme changes
   useEffect(() => {
     const handleThemeChange = (event) => {
-      const newTheme = event.detail?.theme || localStorage.getItem("theme") || "dark";
+      const newTheme =
+        event.detail?.theme || localStorage.getItem("theme") || "dark";
       setIsDark(newTheme === "dark");
     };
 
@@ -397,7 +453,9 @@ export default function GBNPage() {
           style={{
             position: "fixed",
             inset: 0,
-            background: isDark ? "rgba(10, 14, 39, 0.7)" : "rgba(240, 244, 248, 0.7)",
+            background: isDark
+              ? "rgba(10, 14, 39, 0.7)"
+              : "rgba(240, 244, 248, 0.7)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -411,21 +469,41 @@ export default function GBNPage() {
               background: isDark ? "#1a1f3a" : "#e8f1f6",
               borderRadius: 16,
               padding: 24,
-              boxShadow: isDark ? "0 24px 60px rgba(0, 212, 255, 0.15)" : "0 24px 60px rgba(2, 132, 199, 0.15)",
+              boxShadow: isDark
+                ? "0 24px 60px rgba(0, 212, 255, 0.15)"
+                : "0 24px 60px rgba(2, 132, 199, 0.15)",
               color: isDark ? "#f0f5ff" : "#1a1f3a",
-              border: isDark ? "1px solid rgba(0, 212, 255, 0.3)" : "1px solid rgba(2, 132, 199, 0.3)",
+              border: isDark
+                ? "1px solid rgba(0, 212, 255, 0.3)"
+                : "1px solid rgba(2, 132, 199, 0.3)",
             }}
           >
-            <h2 style={{ margin: "0 0 10px", fontSize: 24, color: isDark ? "#00d4ff" : "#0284c7" }}>
+            <h2
+              style={{
+                margin: "0 0 10px",
+                fontSize: 24,
+                color: isDark ? "#00d4ff" : "#0284c7",
+              }}
+            >
               Go-Back-N at a glance
             </h2>
-            <p style={{ margin: "0 0 8px", color: isDark ? "#a0aec0" : "#475569", lineHeight: 1.6 }}>
+            <p
+              style={{
+                margin: "0 0 8px",
+                color: isDark ? "#a0aec0" : "#475569",
+                lineHeight: 1.6,
+              }}
+            >
               Sender can pipeline up to N frames. A single timeout makes it
               retransmit from the oldest unacknowledged frame. Receiver only
               accepts the next in-order frame and emits cumulative ACKs.
             </p>
             <p
-              style={{ margin: "0 0 14px", color: isDark ? "#a0aec0" : "#475569", lineHeight: 1.6 }}
+              style={{
+                margin: "0 0 14px",
+                color: isDark ? "#a0aec0" : "#475569",
+                lineHeight: 1.6,
+              }}
             >
               Controls: pick window size before starting, then use
               Start/Stop/Reset. Press &quot;Loss Frame&quot; or &quot;Loss
@@ -445,7 +523,7 @@ export default function GBNPage() {
                   color: isDark ? "#0a0e27" : "#ffffff",
                   fontWeight: 800,
                   cursor: "pointer",
-                  boxShadow: isDark 
+                  boxShadow: isDark
                     ? "0 0 15px rgba(0, 212, 255, 0.3)"
                     : "0 0 15px rgba(2, 132, 199, 0.3)",
                 }}
@@ -462,8 +540,12 @@ export default function GBNPage() {
             <button
               style={{
                 padding: "10px 20px",
-                background: isDark ? "rgba(0, 212, 255, 0.1)" : "rgba(2, 132, 199, 0.1)",
-                border: isDark ? "2px solid rgba(0, 212, 255, 0.4)" : "2px solid rgba(2, 132, 199, 0.3)",
+                background: isDark
+                  ? "rgba(0, 212, 255, 0.1)"
+                  : "rgba(2, 132, 199, 0.1)",
+                border: isDark
+                  ? "2px solid rgba(0, 212, 255, 0.4)"
+                  : "2px solid rgba(2, 132, 199, 0.3)",
                 borderRadius: 8,
                 color: isDark ? "#00d4ff" : "#0284c7",
                 cursor: "pointer",
@@ -490,9 +572,15 @@ export default function GBNPage() {
             style={{
               padding: 28,
               borderRadius: 26,
-              background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
-              border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.2)",
-              boxShadow: isDark ? "0 0 20px rgba(0, 212, 255, 0.1)" : "0 0 20px rgba(2, 132, 199, 0.08)",
+              background: isDark
+                ? "rgba(0, 212, 255, 0.05)"
+                : "rgba(2, 132, 199, 0.05)",
+              border: isDark
+                ? "2px solid rgba(0, 212, 255, 0.3)"
+                : "2px solid rgba(2, 132, 199, 0.2)",
+              boxShadow: isDark
+                ? "0 0 20px rgba(0, 212, 255, 0.1)"
+                : "0 0 20px rgba(2, 132, 199, 0.08)",
             }}
           >
             <p
@@ -507,7 +595,19 @@ export default function GBNPage() {
             >
               Sliding Window Simulation
             </p>
-            <h1 style={{ margin: "0 0 10px", fontSize: 42, lineHeight: 1.1, background: isDark ? "linear-gradient(135deg, #00d4ff 0%, #a855f7 100%)" : "linear-gradient(135deg, #0284c7 0%, #7c3aed 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            <h1
+              style={{
+                margin: "0 0 10px",
+                fontSize: 42,
+                lineHeight: 1.1,
+                background: isDark
+                  ? "linear-gradient(135deg, #00d4ff 0%, #a855f7 100%)"
+                  : "linear-gradient(135deg, #0284c7 0%, #7c3aed 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
               Go-Back-N Protocol
             </h1>
             <p
@@ -528,9 +628,13 @@ export default function GBNPage() {
             style={{
               padding: 24,
               borderRadius: 24,
-              background: isDark ? "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)" : "linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)",
+              background: isDark
+                ? "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
+                : "linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)",
               color: isDark ? "#ffffff" : "#1a1f3a",
-              boxShadow: isDark ? "0 24px 60px rgba(15, 23, 42, 0.22)" : "0 24px 60px rgba(2, 132, 199, 0.1)",
+              boxShadow: isDark
+                ? "0 24px 60px rgba(15, 23, 42, 0.22)"
+                : "0 24px 60px rgba(2, 132, 199, 0.1)",
             }}
           >
             <div
@@ -552,7 +656,9 @@ export default function GBNPage() {
                 width: "100%",
                 height: 12,
                 borderRadius: 999,
-                background: isDark ? "rgba(0, 212, 255, 0.15)" : "rgba(2, 132, 199, 0.15)",
+                background: isDark
+                  ? "rgba(0, 212, 255, 0.15)"
+                  : "rgba(2, 132, 199, 0.15)",
                 overflow: "hidden",
                 marginBottom: 16,
               }}
@@ -561,8 +667,9 @@ export default function GBNPage() {
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background:
-                    isDark ? "linear-gradient(90deg, #22c55e 0%, #06b6d4 100%)" : "linear-gradient(90deg, #22c55e 0%, #0284c7 100%)",
+                  background: isDark
+                    ? "linear-gradient(90deg, #22c55e 0%, #06b6d4 100%)"
+                    : "linear-gradient(90deg, #22c55e 0%, #0284c7 100%)",
                   transition: "width 0.35s ease",
                 }}
               />
@@ -587,17 +694,33 @@ export default function GBNPage() {
                   style={{
                     padding: "12px 14px",
                     borderRadius: 14,
-                    background: isDark 
-                      ? "rgba(0, 212, 255, 0.08)" 
+                    background: isDark
+                      ? "rgba(0, 212, 255, 0.08)"
                       : "rgba(2, 132, 199, 0.08)",
-                    border: isDark 
-                      ? "1px solid rgba(0, 212, 255, 0.2)" 
+                    border: isDark
+                      ? "1px solid rgba(0, 212, 255, 0.2)"
                       : "1px solid rgba(2, 132, 199, 0.3)",
                     color: isDark ? "#a0aec0" : "#1a1f3a",
                   }}
                 >
-                  <div style={{ fontSize: 12, opacity: 0.7, color: isDark ? "#a0aec0" : "#475569" }}>{label}</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: isDark ? "#00d4ff" : "#0284c7" }}>{value}</div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.7,
+                      color: isDark ? "#a0aec0" : "#475569",
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 800,
+                      color: isDark ? "#00d4ff" : "#0284c7",
+                    }}
+                  >
+                    {value}
+                  </div>
                 </div>
               ))}
             </div>
@@ -609,9 +732,15 @@ export default function GBNPage() {
             marginBottom: 22,
             padding: 18,
             borderRadius: 22,
-            background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
-            border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.2)",
-            boxShadow: isDark ? "0 0 20px rgba(0, 212, 255, 0.1)" : "0 0 20px rgba(2, 132, 199, 0.08)",
+            background: isDark
+              ? "rgba(0, 212, 255, 0.05)"
+              : "rgba(2, 132, 199, 0.05)",
+            border: isDark
+              ? "2px solid rgba(0, 212, 255, 0.3)"
+              : "2px solid rgba(2, 132, 199, 0.2)",
+            boxShadow: isDark
+              ? "0 0 20px rgba(0, 212, 255, 0.1)"
+              : "0 0 20px rgba(2, 132, 199, 0.08)",
           }}
         >
           <div
@@ -620,7 +749,7 @@ export default function GBNPage() {
               gridTemplateColumns:
                 "repeat(auto-fit, minmax(140px, max-content))",
               gap: 12,
-                alignItems: "end",
+              alignItems: "end",
             }}
           >
             <label
@@ -639,12 +768,16 @@ export default function GBNPage() {
                 max={60}
                 value={totalPackets}
                 disabled={running}
-                onChange={(event) => handlePacketCountChange(event.target.value)}
+                onChange={(event) =>
+                  handlePacketCountChange(event.target.value)
+                }
                 style={{
                   width: 140,
                   padding: "10px 12px",
                   borderRadius: 12,
-                  border: isDark ? "1px solid rgba(148, 163, 184, 0.45)" : "1px solid rgba(2, 132, 199, 0.3)",
+                  border: isDark
+                    ? "1px solid rgba(148, 163, 184, 0.45)"
+                    : "1px solid rgba(2, 132, 199, 0.3)",
                   background: isDark ? "#ffffff" : "#f0f9ff",
                   color: isDark ? "#1a1f3a" : "#1a1f3a",
                 }}
@@ -671,7 +804,9 @@ export default function GBNPage() {
                   width: 120,
                   padding: "10px 12px",
                   borderRadius: 12,
-                  border: isDark ? "1px solid rgba(148, 163, 184, 0.45)" : "1px solid rgba(2, 132, 199, 0.3)",
+                  border: isDark
+                    ? "1px solid rgba(148, 163, 184, 0.45)"
+                    : "1px solid rgba(2, 132, 199, 0.3)",
                   background: isDark ? "#ffffff" : "#f0f9ff",
                   color: isDark ? "#1a1f3a" : "#1a1f3a",
                 }}
@@ -784,14 +919,14 @@ export default function GBNPage() {
             marginBottom: 22,
             padding: 24,
             borderRadius: 24,
-            background: isDark 
+            background: isDark
               ? "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)"
               : "linear-gradient(145deg, #f0f9ff 0%, #e8f1f6 100%)",
             color: isDark ? "#e2e8f0" : "#1a1f3a",
-            border: isDark 
+            border: isDark
               ? "1px solid rgba(148, 163, 184, 0.18)"
               : "1px solid rgba(2, 132, 199, 0.2)",
-            boxShadow: isDark 
+            boxShadow: isDark
               ? "0 28px 60px rgba(15, 23, 42, 0.25)"
               : "0 28px 60px rgba(2, 132, 199, 0.08)",
           }}
@@ -805,7 +940,15 @@ export default function GBNPage() {
               marginBottom: 18,
             }}
           >
-            <h2 style={{ margin: 0, fontSize: 24, color: isDark ? "#00d4ff" : "#0284c7" }}>Communication Flow</h2>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 24,
+                color: isDark ? "#00d4ff" : "#0284c7",
+              }}
+            >
+              Communication Flow
+            </h2>
             <div
               style={{
                 display: "flex",
@@ -823,21 +966,40 @@ export default function GBNPage() {
             </div>
           </div>
 
-          <div style={{ position: "relative", minHeight: 260 }}>
+          <div
+            style={{
+              position: "relative",
+              minHeight: 320,
+              gap: 12,
+            }}
+          >
             <div
               style={{
+                marginTop: 30,
                 position: "absolute",
                 left: 0,
                 top: 28,
                 width: 160,
                 padding: 20,
                 borderRadius: 20,
-                background: isDark ? "rgba(59, 130, 246, 0.18)" : "rgba(2, 132, 199, 0.12)",
-                border: isDark ? "1px solid rgba(96, 165, 250, 0.35)" : "1px solid rgba(2, 132, 199, 0.25)",
+                background: isDark
+                  ? "rgba(59, 130, 246, 0.18)"
+                  : "rgba(2, 132, 199, 0.12)",
+                border: isDark
+                  ? "1px solid rgba(96, 165, 250, 0.35)"
+                  : "1px solid rgba(2, 132, 199, 0.25)",
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 15, fontWeight: 800 }}>Sender</div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: isDark ? "#00d4ff" : "#0284c7",
+                }}
+              >
+                Sender
+              </div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
                 Window [{state.base},{" "}
                 {Math.min(state.base + state.windowSize - 1, totalPackets - 1)}]
@@ -847,19 +1009,25 @@ export default function GBNPage() {
             <div
               style={{
                 position: "absolute",
+                marginTop: 30,
+
                 right: 0,
                 top: 28,
                 width: 160,
                 padding: 20,
                 borderRadius: 20,
-                background: isDark ? "rgba(168, 85, 247, 0.18)" : "rgba(124, 58, 237, 0.12)",
-                border: isDark ? "1px solid rgba(196, 181, 253, 0.35)" : "1px solid rgba(124, 58, 237, 0.25)",
+                background: isDark
+                  ? "rgba(168, 85, 247, 0.18)"
+                  : "rgba(124, 58, 237, 0.12)",
+                border: isDark
+                  ? "1px solid rgba(196, 181, 253, 0.35)"
+                  : "1px solid rgba(124, 58, 237, 0.25)",
                 textAlign: "center",
               }}
             >
               <div style={{ fontSize: 15, fontWeight: 800 }}>Receiver</div>
               <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>
-                Waiting for F{state.receiverExpected}
+                Waiting for F{state.receiverExpected - 1}
               </div>
             </div>
 
@@ -874,6 +1042,7 @@ export default function GBNPage() {
                   "linear-gradient(90deg, rgba(56, 189, 248, 0.4), rgba(34, 197, 94, 0.4))",
               }}
             />
+
             <div
               style={{
                 position: "absolute",
@@ -908,6 +1077,7 @@ export default function GBNPage() {
                 letterSpacing: 0.8,
                 textTransform: "uppercase",
                 color: "rgba(226,232,240,0.7)",
+                marginTop: 6,
               }}
             >
               ACKs
@@ -944,7 +1114,7 @@ export default function GBNPage() {
             <div
               style={{
                 position: "absolute",
-                bottom: 0,
+                top: 190,
                 left: 0,
                 right: 0,
                 display: "grid",
@@ -956,8 +1126,12 @@ export default function GBNPage() {
                 style={{
                   padding: 16,
                   borderRadius: 18,
-                  background: isDark ? "rgba(255,255,255,0.05)" : "rgba(2, 132, 199, 0.08)",
-                  border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(2, 132, 199, 0.15)",
+                  background: isDark
+                    ? "rgba(255,255,255,0.05)"
+                    : "rgba(2, 132, 199, 0.08)",
+                  border: isDark
+                    ? "1px solid rgba(255,255,255,0.08)"
+                    : "1px solid rgba(2, 132, 199, 0.15)",
                 }}
               >
                 <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
@@ -971,10 +1145,15 @@ export default function GBNPage() {
               </div>
               <div
                 style={{
+                  // marginTop : 20,
                   padding: 16,
                   borderRadius: 18,
-                  background: isDark ? "rgba(255,255,255,0.05)" : "rgba(2, 132, 199, 0.08)",
-                  border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(2, 132, 199, 0.15)",
+                  background: isDark
+                    ? "rgba(255,255,255,0.05)"
+                    : "rgba(2, 132, 199, 0.08)",
+                  border: isDark
+                    ? "1px solid rgba(255,255,255,0.08)"
+                    : "1px solid rgba(2, 132, 199, 0.15)",
                 }}
               >
                 <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
@@ -1028,12 +1207,25 @@ export default function GBNPage() {
             style={{
               padding: 20,
               borderRadius: 22,
-              background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
-              border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.2)",
-              boxShadow: isDark ? "0 0 20px rgba(0, 212, 255, 0.1)" : "0 0 20px rgba(2, 132, 199, 0.08)",
+              background: isDark
+                ? "rgba(0, 212, 255, 0.05)"
+                : "rgba(2, 132, 199, 0.05)",
+              border: isDark
+                ? "2px solid rgba(0, 212, 255, 0.3)"
+                : "2px solid rgba(2, 132, 199, 0.2)",
+              boxShadow: isDark
+                ? "0 0 20px rgba(0, 212, 255, 0.1)"
+                : "0 0 20px rgba(2, 132, 199, 0.08)",
             }}
           >
-            <h3 style={{ marginTop: 0, marginBottom: 14, fontSize: 20, color: isDark ? "#00d4ff" : "#0284c7" }}>
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                fontSize: 20,
+                color: isDark ? "#00d4ff" : "#0284c7",
+              }}
+            >
               Sender Frames
             </h3>
             <div
@@ -1088,12 +1280,25 @@ export default function GBNPage() {
             style={{
               padding: 20,
               borderRadius: 22,
-              background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
-              border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.2)",
-              boxShadow: isDark ? "0 0 20px rgba(0, 212, 255, 0.1)" : "0 0 20px rgba(2, 132, 199, 0.08)",
+              background: isDark
+                ? "rgba(0, 212, 255, 0.05)"
+                : "rgba(2, 132, 199, 0.05)",
+              border: isDark
+                ? "2px solid rgba(0, 212, 255, 0.3)"
+                : "2px solid rgba(2, 132, 199, 0.2)",
+              boxShadow: isDark
+                ? "0 0 20px rgba(0, 212, 255, 0.1)"
+                : "0 0 20px rgba(2, 132, 199, 0.08)",
             }}
           >
-            <h3 style={{ marginTop: 0, marginBottom: 14, fontSize: 20, color: isDark ? "#a855f7" : "#7c3aed" }}>
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                fontSize: 20,
+                color: isDark ? "#a855f7" : "#7c3aed",
+              }}
+            >
               Receiver View
             </h3>
             <div
@@ -1142,15 +1347,34 @@ export default function GBNPage() {
             style={{
               padding: 20,
               borderRadius: 22,
-              background: isDark ? "rgba(0, 212, 255, 0.05)" : "rgba(2, 132, 199, 0.05)",
-              border: isDark ? "2px solid rgba(0, 212, 255, 0.3)" : "2px solid rgba(2, 132, 199, 0.2)",
-              boxShadow: isDark ? "0 0 20px rgba(0, 212, 255, 0.1)" : "0 0 20px rgba(2, 132, 199, 0.08)",
+              background: isDark
+                ? "rgba(0, 212, 255, 0.05)"
+                : "rgba(2, 132, 199, 0.05)",
+              border: isDark
+                ? "2px solid rgba(0, 212, 255, 0.3)"
+                : "2px solid rgba(2, 132, 199, 0.2)",
+              boxShadow: isDark
+                ? "0 0 20px rgba(0, 212, 255, 0.1)"
+                : "0 0 20px rgba(2, 132, 199, 0.08)",
             }}
           >
-            <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, color: isDark ? "#00f0ff" : "#0ea5e9" }}>
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 10,
+                fontSize: 20,
+                color: isDark ? "#00f0ff" : "#0ea5e9",
+              }}
+            >
               Notes
             </h3>
-            <div style={{ fontSize: 14, lineHeight: 1.6, color: isDark ? "#a0aec0" : "#475569" }}>
+            <div
+              style={{
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: isDark ? "#a0aec0" : "#475569",
+              }}
+            >
               Watch the in-flight labels on the arrows above. The sender window
               outline shows what can be sent; the receiver highlights only the
               next expected frame. Loss buttons apply to the very next frame or
