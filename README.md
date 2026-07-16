@@ -9,7 +9,7 @@ An interactive, educational visualization tool for understanding three fundament
 
 ✅ **Real-time Automatic Simulation** - Simulations run automatically and show all characteristics without failure
 ✅ **Beautiful Interactive UI** - Color-coded packets and visual window representation
-✅ **Live Statistics** - Track packets sent, acknowledged, lost, and completion percentage
+✅ **Live Statistics** - Track packets sent, acknowledged, lost, and completion percentage.
 ✅ **Protocol Comparison** - Run all three protocols to understand their differences
 ✅ **Configurable Parameters** - Adjust window size and loss rate
 ✅ **Educational Insights** - Detailed explanation of each protocol's characteristics
