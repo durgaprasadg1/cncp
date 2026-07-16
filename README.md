@@ -15,7 +15,7 @@ An interactive, educational visualization tool for understanding three fundament
 ✅ **Educational Insights** - Detailed explanation of each protocol's characteristics
 ✅ **Retransmission Visualization** - See how each protocol handles packet loss differently
 
-## 🚀 Quick Start
+## 🚀 Quick Start 
 
 ### Installation
 ```bash
